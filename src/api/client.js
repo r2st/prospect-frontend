@@ -304,6 +304,11 @@ export const campaignsApi = {
   // `body` = { name, use_for_campaign?: 'template' | 'ai_template' }.
   saveTemplate: (id, pid, body) =>
     api.post(`/campaigns/${id}/prospects/${pid}/save-template`, body).then(r => r.data),
+  // The bytes of one file the campaign's emails carry, for the draft preview.
+  // Fetched with the auth header (an <iframe src> couldn't send it).
+  attachment: (id, name) =>
+    api.get(`/campaigns/${id}/attachments/file`, { params: { name }, responseType: 'arraybuffer' })
+      .then(r => ({ data: r.data, type: r.headers['content-type'] || '' })),
 };
 
 export const aiApi = {

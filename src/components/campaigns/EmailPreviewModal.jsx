@@ -1,6 +1,51 @@
 import { useEffect, useState } from 'react';
-import { BookmarkPlus, Check, Mail, Paperclip, SkipForward, X } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { BookmarkPlus, Check, Download, Loader2, Mail, Paperclip, SkipForward, X } from 'lucide-react';
+import { campaignsApi } from '../../api/client';
 import { useSaveDraftAsTemplate } from '../../hooks/useCampaigns';
+import PdfPreview from './PdfPreview';
+
+// One attachment, opened: a PDF renders in place, anything else downloads.
+export function AttachmentViewer({ campaignId, name }) {
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['campaigns', 'attachment', campaignId, name],
+    queryFn: () => campaignsApi.attachment(campaignId, name),
+    staleTime: 0,
+    gcTime: 60000,
+    retry: false,
+  });
+  if (isLoading) {
+    return (
+      <p className="mt-2 flex items-center text-sm text-gray-500">
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading {name}…
+      </p>
+    );
+  }
+  if (isError || !data) return <p className="mt-2 text-sm text-red-600">Couldn&apos;t load {name}.</p>;
+  if (data.type.startsWith('application/pdf') || name.toLowerCase().endsWith('.pdf')) {
+    return <PdfPreview data={data.data} filename={name} />;
+  }
+  return <DownloadLink data={data.data} type={data.type} name={name} />;
+}
+
+function DownloadLink({ data, type, name }) {
+  const [href, setHref] = useState(null);
+  useEffect(() => {
+    const url = URL.createObjectURL(new Blob([data], { type }));
+    setHref(url);
+    return () => URL.revokeObjectURL(url);
+  }, [data, type]);
+  return (
+    <p className="mt-2 text-sm text-gray-600">
+      No preview for this file type.{' '}
+      {href && (
+        <a href={href} download={name} className="inline-flex items-center gap-1 font-medium text-indigo-600 hover:underline">
+          <Download className="h-3.5 w-3.5" /> Download {name}
+        </a>
+      )}
+    </p>
+  );
+}
 import SafeHtml from '../SafeHtml';
 import { EMAIL_BODY_CLASSES, prepareEmailHtml } from '../outreach/PreviewModal';
 import { ProspectStatusBadge } from './StatusBadge';
@@ -51,6 +96,8 @@ export function SaveTemplateForm({ campaignId, prospect, onSaved }) {
 // be approved or skipped from here without going back to the table.
 export default function EmailPreviewModal({ prospect, onClose, onApprove, onSkip, busy, attachments = [], campaignId }) {
   const [saving, setSaving] = useState(false);
+  const [opened, setOpened] = useState(null);
+  useEffect(() => setOpened(null), [prospect?.id]);
   useEffect(() => {
     if (!prospect) return undefined;
     const onKey = (e) => e.key === 'Escape' && onClose();
@@ -114,12 +161,25 @@ export default function EmailPreviewModal({ prospect, onClose, onApprove, onSkip
                   <p className="text-xs font-medium uppercase tracking-wider text-gray-400">Attachments</p>
                   <ul className="mt-1 flex flex-wrap gap-2">
                     {attachments.map((name) => (
-                      <li key={name} className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2 py-1 text-xs text-gray-700">
-                        <Paperclip className="h-3 w-3 text-gray-400" />
-                        {name}
+                      <li key={name}>
+                        <button
+                          type="button"
+                          onClick={() => setOpened(opened === name ? null : name)}
+                          aria-pressed={opened === name}
+                          aria-label={`${opened === name ? 'Hide' : 'Preview'} ${name}`}
+                          disabled={!campaignId}
+                          className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs ${
+                            opened === name ? 'border-indigo-300 bg-indigo-50 text-indigo-700' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          <Paperclip className="h-3 w-3 text-gray-400" />
+                          {name}
+                          <span className="text-gray-400">· {opened === name ? 'Hide' : 'Preview'}</span>
+                        </button>
                       </li>
                     ))}
                   </ul>
+                  {opened && campaignId && <AttachmentViewer campaignId={campaignId} name={opened} />}
                 </div>
               )}
               {campaignId && (saving ? (
