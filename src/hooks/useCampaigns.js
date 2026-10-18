@@ -7,6 +7,9 @@ import { normalizeCampaign, normalizeCampaignList, normalizeProspectPage, toApiS
 // A 404 on the collection means this API server doesn't have campaigns yet.
 export const isNotAvailable = (error) => error?.response?.status === 404;
 
+// How long after an instant send to re-read the campaign so the row shows "sent".
+export const SENT_REFRESH_MS = 8000;
+
 const invalidateCampaign = (id) => {
   queryClient.invalidateQueries({ queryKey: ['campaigns', 'list'] });
   if (id) {
@@ -112,9 +115,17 @@ export function useCampaignActions(id) {
 
   const approve = useMutation({
     mutationFn: (pid) => campaignsApi.approve(id, pid),
-    onSuccess: () => {
+    onSuccess: (data) => {
       invalidateCampaign(id);
-      toast.success('Email approved — it will go out in the next send window');
+      if (data?.instant_send === 'dispatched') {
+        toast.success('Email approved — sending now');
+        // The send lands a few seconds later; show it without waiting for a poll.
+        setTimeout(() => invalidateCampaign(id), SENT_REFRESH_MS);
+      } else if (data?.instant_send === 'window_closed') {
+        toast.success('Email approved — it will go out when the send window opens');
+      } else {
+        toast.success('Email approved — it will go out in the next send window');
+      }
     },
     onError: (e) => toast.error(errMsg(e, 'Could not approve the email')),
   });

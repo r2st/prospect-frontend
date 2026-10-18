@@ -197,6 +197,18 @@ describe('CampaignDashboard', () => {
     expect(toastMock.success).toHaveBeenCalledWith('Prospect skipped');
   });
 
+  it.each([
+    ['dispatched', 'Email approved — sending now'],
+    ['window_closed', 'Email approved — it will go out when the send window opens'],
+    [undefined, 'Email approved — it will go out in the next send window'],
+  ])('says what approval did with the email (instant_send=%s)', async (instantSend, message) => {
+    api.approve.mockResolvedValue({ status: 'approved', instant_send: instantSend });
+    renderPage();
+    const [row] = await screen.findAllByTestId('prospect-row');
+    await userEvent.click(within(row).getByRole('button', { name: 'Approve email to Ana Li' }));
+    await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith(message));
+  });
+
   it('previews the generated email and approves from the modal', async () => {
     api.approve.mockResolvedValue({});
     renderPage();
