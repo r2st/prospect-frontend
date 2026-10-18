@@ -488,9 +488,7 @@ export default function CampaignDashboard() {
               </span>
             )}
             <span>
-              Up to {campaign.settings.daily_limit}/day · {campaign.settings.send_window_start}–
-              {campaign.settings.send_window_end}
-              {campaign.settings.send_on_weekends ? ' incl. weekends' : ' weekdays'}
+              Up to {campaign.settings.daily_limit}/day · sends on approval
             </span>
             {campaign.created_at && <span>Created {formatDate(campaign.created_at)}</span>}
           </p>

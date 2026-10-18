@@ -517,7 +517,6 @@ function SettingsStep({ campaign, onBack, onNext }) {
   const [s, setS] = useState(campaign.settings);
   const update = useUpdateCampaign(campaign.id);
   const set = (key) => (value) => setS((prev) => ({ ...prev, [key]: value }));
-  const windowInvalid = s.send_window_end <= s.send_window_start;
 
   return (
     <div className="space-y-5">
@@ -553,29 +552,6 @@ function SettingsStep({ campaign, onBack, onNext }) {
         </div>
       </div>
 
-      <fieldset>
-        <legend className="text-sm font-medium text-gray-700">Send window</legend>
-        <p className="text-xs text-gray-500">Emails only go out between these times, in your organization’s time zone.</p>
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <input
-            type="time"
-            aria-label="Send window start"
-            value={s.send_window_start}
-            onChange={(e) => set('send_window_start')(e.target.value)}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-          />
-          <span className="text-sm text-gray-500">to</span>
-          <input
-            type="time"
-            aria-label="Send window end"
-            value={s.send_window_end}
-            onChange={(e) => set('send_window_end')(e.target.value)}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-          />
-        </div>
-        {windowInvalid && <p className="mt-1 text-xs text-red-600">The window has to end after it starts.</p>}
-      </fieldset>
-
       <div>
         <label htmlFor="settings-sender" className="text-sm font-medium text-gray-700">Send from</label>
         <SenderSelect id="settings-sender" value={s.sender_account_id} onChange={set('sender_account_id')} />
@@ -600,13 +576,6 @@ function SettingsStep({ campaign, onBack, onNext }) {
           onChange={set('attach_documents')}
         />
         <Toggle
-          id="send-weekends"
-          label="Send on weekends"
-          description="Off: Saturdays and Sundays are skipped."
-          checked={s.send_on_weekends}
-          onChange={set('send_on_weekends')}
-        />
-        <Toggle
           id="review-before-send"
           label="Review before send"
           description="Each email waits as a draft until you approve it. Recommended for a new campaign."
@@ -618,7 +587,6 @@ function SettingsStep({ campaign, onBack, onNext }) {
       <StepFooter
         onBack={onBack}
         onNext={() => update.mutate({ settings: s }, { onSuccess: onNext })}
-        nextDisabled={windowInvalid}
         pending={update.isPending}
       />
     </div>
@@ -687,9 +655,10 @@ function LaunchStep({ campaign, onBack, goTo, onLaunched }) {
           </ul>
         </SummaryRow>
         <SummaryRow label="Sending" onEdit={() => goTo(2)}>
-          Up to {settings.daily_limit} emails/day, {settings.send_window_start}–{settings.send_window_end},{' '}
-          {settings.send_on_weekends ? 'every day' : 'weekdays only'}.{' '}
-          {settings.review_before_send ? 'You approve each email before it goes out.' : 'Emails send automatically.'}
+          Up to {settings.daily_limit} emails/day.{' '}
+          {settings.review_before_send
+            ? 'You approve each email, and it goes out as soon as you do.'
+            : 'Emails send automatically.'}
         </SummaryRow>
         <SummaryRow label="Email template" onEdit={() => goTo(2)}>
           <span data-testid="launch-template">

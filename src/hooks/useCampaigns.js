@@ -132,10 +132,9 @@ export function useCampaignActions(id) {
         toast.success('Email approved — sending now');
         // The send lands a few seconds later; show it without waiting for a poll.
         setTimeout(() => invalidateCampaign(id), SENT_REFRESH_MS);
-      } else if (data?.instant_send === 'window_closed') {
-        toast.success('Email approved — it will go out when the send window opens');
       } else {
-        toast.success('Email approved — it will go out in the next send window');
+        // Broker unreachable: the 15-minute tick sends it instead.
+        toast.success('Email approved — it will go out within 15 minutes');
       }
     },
     onError: (e) => toast.error(errMsg(e, 'Could not approve the email')),

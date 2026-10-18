@@ -257,20 +257,17 @@ describe('CampaignNew wizard', () => {
     expect(await screen.findByText('Sending settings')).toBeInTheDocument();
   });
 
-  it('saves sending settings and rejects an inverted window', async () => {
+  it('saves sending settings, with no send window to set', async () => {
     renderAt('/campaigns/new?id=c1&step=2');
     const slider = await screen.findByLabelText('Daily send limit');
     fireEvent.change(slider, { target: { value: '60' } });
     expect(screen.getByTestId('daily-limit-value')).toHaveTextContent('60 emails/day');
 
-    await userEvent.click(screen.getByRole('switch', { name: 'Send on weekends' }));
     await userEvent.click(screen.getByRole('switch', { name: 'Review before send' }));
 
-    const end = screen.getByLabelText('Send window end');
-    fireEvent.change(end, { target: { value: '08:00' } });
-    expect(screen.getByText('The window has to end after it starts.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^Next/ })).toBeDisabled();
-    fireEvent.change(end, { target: { value: '18:00' } });
+    // Approved emails send immediately, so there's no window or weekend rule.
+    expect(screen.queryByLabelText('Send window start')).not.toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: 'Send on weekends' })).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: /^Next/ }));
     await waitFor(() =>
@@ -279,8 +276,8 @@ describe('CampaignNew wizard', () => {
       expect(camp.update).toHaveBeenCalledWith('c1', {
         daily_send_limit: 60,
         send_window_start: '09:00',
-        send_window_end: '18:00',
-        send_on_weekends: true,
+        send_window_end: '17:00',
+        send_on_weekends: false,
         review_before_send: false,
         attach_documents: false,
         template_id: null,
