@@ -15,11 +15,31 @@ export const CAMPAIGN_STATUS = {
 export const PROSPECT_STATUS = {
   queued: { label: 'Queued', className: 'bg-gray-100 text-gray-700' },
   draft: { label: 'Draft', className: 'bg-indigo-50 text-indigo-700' },
+  approved: { label: 'Ready to send', className: 'bg-teal-50 text-teal-700' },
   sent: { label: 'Sent', className: 'bg-blue-50 text-blue-700' },
   replied: { label: 'Replied', className: 'bg-green-50 text-green-700' },
   bounced: { label: 'Bounced', className: 'bg-red-50 text-red-700' },
   skipped: { label: 'Skipped', className: 'bg-gray-100 text-gray-500' },
+  no_email: { label: 'No email', className: 'bg-amber-50 text-amber-700' },
 };
+
+// The API calls a written-but-unapproved email `draft_created`; the UI calls it
+// `draft`. Translate both ways so the Draft filter and Approve button work.
+const API_STATUS = { draft: 'draft_created' };
+const UI_STATUS = { draft_created: 'draft' };
+export const toApiStatus = (s) => API_STATUS[s] || s;
+
+// Hunter's verdict on a prospect's address. Only `verified` is ever sent.
+export function emailVerification(p) {
+  if (!p.contact_email) return null;
+  if (p.email_verified) return { key: 'verified', label: 'Verified', className: 'bg-green-50 text-green-700' };
+  if (p.email_verification) {
+    return { key: 'rejected', label: `Not deliverable (${p.email_verification})`, className: 'bg-red-50 text-red-700' };
+  }
+  return { key: 'unverified', label: 'Unverified', className: 'bg-amber-50 text-amber-700' };
+}
+
+export const EMAIL_ORIGIN = { hunter_finder: 'Found by Hunter', pattern: 'Guessed from name' };
 
 export const DEFAULT_SETTINGS = {
   daily_limit: 25,
@@ -104,7 +124,12 @@ export function normalizeCampaign(raw) {
       bounced,
       // Stored as a fraction (0.04). A backend sending 4 for 4% is caught here.
       bounce_rate: bounceRate > 1 ? bounceRate / 100 : bounceRate,
-      drafts_pending: num(m.drafts_pending ?? m.pending_review),
+      drafts_pending: num(m.drafts_pending ?? m.pending_review ?? m.awaiting_review),
+      companies_discovered: num(m.companies_discovered),
+      companies_without_email: num(m.companies_without_email),
+      queued_to_send: num(m.queued_to_send),
+      pending_verified: num(m.pending_verified),
+      pending_unverified: num(m.pending_unverified),
     },
     daily: (Array.isArray(daily) ? daily : []).map((d) => ({
       date: d.date ?? d.day,
@@ -129,12 +154,15 @@ export function normalizeProspect(p) {
     null;
   return {
     ...p,
-    status: p.status || p.email_status || 'queued',
+    status: UI_STATUS[p.status] || p.status || p.email_status || 'queued',
     company_name: p.company_name || company.name || '—',
     company_domain: p.company_domain || company.domain || null,
     contact_name: contactName,
     contact_title: p.contact_title || contact.title || null,
-    contact_email: p.contact_email || contact.email || null,
+    contact_email: p.contact_email || contact.email || p.to_email || null,
+    email_verified: Boolean(p.email_verified),
+    email_verification: p.email_verification || null,
+    email_origin: p.email_origin || null,
     sent_at: p.sent_at || null,
     subject: p.email_subject ?? p.subject ?? email.subject ?? '',
     body: p.email_body ?? p.body ?? email.body ?? '',

@@ -4,13 +4,16 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import {
   AlertTriangle,
   ArrowLeft,
+  Building2,
   Check,
+  Clock,
   Eye,
   FileText,
   Mail,
   MessageSquareReply,
   Pause,
   Play,
+  ShieldCheck,
   SkipForward,
   Square,
   Trash2,
@@ -18,7 +21,7 @@ import {
 } from 'lucide-react';
 import { useCampaign, useCampaignActions, useCampaignProspects, isNotAvailable } from '../hooks/useCampaigns';
 import { errMsg } from '../hooks/useDiscoveryDocuments';
-import { PROSPECT_STATUS, canPause, canResume, canStop, formatPercent } from '../lib/campaigns';
+import { EMAIL_ORIGIN, PROSPECT_STATUS, canPause, canResume, canStop, emailVerification, formatPercent } from '../lib/campaigns';
 import { cn, formatDate, formatNumber } from '../lib/utils';
 import ConfirmDialog from '../components/ConfirmDialog';
 import EmptyState from '../components/EmptyState';
@@ -83,6 +86,33 @@ function DailyChart({ data }) {
         </div>
       )}
     </div>
+  );
+}
+
+function VerificationBadge({ p }) {
+  const v = emailVerification(p);
+  if (!v) return null;
+  const origin = EMAIL_ORIGIN[p.email_origin];
+  return (
+    <span
+      className={cn('inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium', v.className)}
+      title={origin ? `${origin}. Only verified addresses are sent.` : 'Only verified addresses are sent.'}
+      data-testid="email-verification"
+    >
+      {v.label}
+    </span>
+  );
+}
+
+function ProspectEmail({ p }) {
+  if (!p.contact_email) return null;
+  const origin = EMAIL_ORIGIN[p.email_origin];
+  return (
+    <span className="flex flex-wrap items-center gap-1.5 text-xs text-gray-500">
+      <span className="truncate">{p.contact_email}</span>
+      <VerificationBadge p={p} />
+      {origin && <span className="text-[11px] text-gray-400">· {origin}</span>}
+    </span>
   );
 }
 
@@ -202,9 +232,10 @@ function ProspectTable({ campaignId, actions }) {
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-gray-900">{p.company_name}</p>
                     <p className="truncate text-xs text-gray-500">
-                      {p.contact_name || p.contact_email || 'No contact yet'}
+                      {p.contact_name || 'No contact yet'}
                       {p.contact_title && ` · ${p.contact_title}`}
                     </p>
+                    <ProspectEmail p={p} />
                   </div>
                   <ProspectStatusBadge status={p.status} />
                 </div>
@@ -243,7 +274,8 @@ function ProspectTable({ campaignId, actions }) {
                     </td>
                     <td className="px-4 py-3">
                       <p className="text-sm text-gray-900">{p.contact_name || '—'}</p>
-                      <p className="text-xs text-gray-500">{p.contact_title || p.contact_email}</p>
+                      {p.contact_title && <p className="text-xs text-gray-500">{p.contact_title}</p>}
+                      <ProspectEmail p={p} />
                     </td>
                     <td className="whitespace-nowrap px-4 py-3">
                       <ProspectStatusBadge status={p.status} />
@@ -449,6 +481,44 @@ export default function CampaignDashboard() {
           icon={AlertTriangle}
           color={metrics.bounce_rate > 0.05 ? 'red' : 'orange'}
         />
+      </div>
+
+      <div>
+        <h2 className="mb-2 text-sm font-semibold text-gray-900">Discovery &amp; send queue</h2>
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4" data-testid="discovery-metrics">
+          <MetricCard
+            title="Companies Discovered"
+            value={formatNumber(metrics.companies_discovered)}
+            subtitle={
+              metrics.companies_without_email
+                ? `${formatNumber(metrics.companies_without_email)} without an email yet`
+                : undefined
+            }
+            icon={Building2}
+            color="purple"
+          />
+          <MetricCard
+            title="Queued to Send"
+            value={formatNumber(metrics.queued_to_send)}
+            subtitle="Drafted and approved"
+            icon={Clock}
+            color="teal"
+          />
+          <MetricCard
+            title="Verified Emails"
+            value={formatNumber(metrics.pending_verified)}
+            subtitle="Cleared to send"
+            icon={ShieldCheck}
+            color="green"
+          />
+          <MetricCard
+            title="Awaiting Verification"
+            value={formatNumber(metrics.pending_unverified)}
+            subtitle="Held until Hunter verifies"
+            icon={AlertTriangle}
+            color="yellow"
+          />
+        </div>
       </div>
 
       <ErrorBoundary resetKey={`${id}:chart`} fallback={({ reset }) => <SectionFallback reset={reset} />}>

@@ -2,7 +2,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { campaignsApi, queryClient } from '../api/client';
 import { errMsg } from './useDiscoveryDocuments';
-import { normalizeCampaign, normalizeCampaignList, normalizeProspectPage } from '../lib/campaigns';
+import { normalizeCampaign, normalizeCampaignList, normalizeProspectPage, toApiStatus } from '../lib/campaigns';
 
 // A 404 on the collection means this API server doesn't have campaigns yet.
 export const isNotAvailable = (error) => error?.response?.status === 404;
@@ -47,7 +47,7 @@ export function useCampaignProspects(id, { page = 1, pageSize = 25, status } = {
   return useQuery({
     queryKey: ['campaigns', 'prospects', id, { page, pageSize, status: status || null }],
     queryFn: () =>
-      campaignsApi.prospects(id, { page, page_size: pageSize, ...(status ? { status } : {}) }),
+      campaignsApi.prospects(id, { page, page_size: pageSize, ...(status ? { status: toApiStatus(status) } : {}) }),
     select: (data) => normalizeProspectPage(data, pageSize),
     enabled: Boolean(id),
     placeholderData: (prev) => prev,

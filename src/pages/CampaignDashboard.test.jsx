@@ -230,4 +230,65 @@ describe('CampaignDashboard', () => {
     renderPage();
     expect(await screen.findByText('Campaign not found')).toBeInTheDocument();
   });
+
+  it('shows discovery and send-queue numbers', async () => {
+    api.get.mockResolvedValue({
+      ...CAMPAIGN,
+      metrics: {
+        ...CAMPAIGN.metrics,
+        companies_discovered: 12,
+        companies_without_email: 4,
+        queued_to_send: 3,
+        pending_verified: 2,
+        pending_unverified: 5,
+      },
+    });
+    renderPage();
+    const box = within(await screen.findByTestId('discovery-metrics'));
+    expect(box.getByText('Companies Discovered')).toBeInTheDocument();
+    expect(box.getByText('12')).toBeInTheDocument();
+    expect(box.getByText('4 without an email yet')).toBeInTheDocument();
+    expect(box.getByText('3')).toBeInTheDocument();
+    expect(box.getByText('2')).toBeInTheDocument();
+    expect(box.getByText('5')).toBeInTheDocument();
+  });
+
+  it('marks each address verified or unverified, as the API reports it', async () => {
+    api.prospects.mockResolvedValue({
+      items: [
+        {
+          id: 'p3', status: 'draft_created', company_name: 'Gamma', contact_name: 'Cy Day',
+          to_email: 'cy@gamma.com', email_verified: false, email_verification: null, email_origin: 'pattern',
+          email_subject: 's', email_body: 'b',
+        },
+        {
+          id: 'p4', status: 'approved', company_name: 'Delta', contact_name: 'Di Eve',
+          to_email: 'di@delta.com', email_verified: true, email_verification: 'deliverable',
+          email_origin: 'hunter_finder',
+        },
+        { id: 'p5', status: 'no_email', company_name: 'Epsilon' },
+      ],
+      total: 3, page: 1, page_size: 25,
+    });
+    renderPage();
+    const [gamma, delta, eps] = await screen.findAllByTestId('prospect-row');
+    expect(within(gamma).getByText('cy@gamma.com')).toBeInTheDocument();
+    expect(within(gamma).getByTestId('email-verification')).toHaveTextContent('Unverified');
+    expect(within(gamma).getByText('· Guessed from name')).toBeInTheDocument();
+    // draft_created is a draft: it can be approved.
+    expect(within(gamma).getByRole('button', { name: 'Approve email to Cy Day' })).toBeInTheDocument();
+    expect(within(delta).getByTestId('email-verification')).toHaveTextContent('Verified');
+    expect(within(delta).getByText('Ready to send')).toBeInTheDocument();
+    expect(within(eps).getByText('No email')).toBeInTheDocument();
+    expect(within(eps).queryByTestId('email-verification')).not.toBeInTheDocument();
+  });
+
+  it('asks the API for draft_created when filtering by Draft', async () => {
+    renderPage();
+    await screen.findAllByTestId('prospect-row');
+    await userEvent.click(screen.getByRole('button', { name: 'Draft' }));
+    await waitFor(() =>
+      expect(api.prospects).toHaveBeenLastCalledWith('c1', { page: 1, page_size: 25, status: 'draft_created' })
+    );
+  });
 });
