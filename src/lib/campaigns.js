@@ -252,3 +252,39 @@ export function formatPercent(fraction) {
 export const canPause = (status) => status === 'active';
 export const canResume = (status) => status === 'paused';
 export const canStop = (status) => status === 'active' || status === 'paused';
+
+// "Mon, Oct 19, 9:00 AM EDT" in the campaign's own time zone.
+export function formatWindowTime(iso, timeZone) {
+  if (!iso) return null;
+  const opts = { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' };
+  try {
+    return new Date(iso).toLocaleString('en-US', { ...opts, timeZone: timeZone || undefined });
+  } catch {
+    return new Date(iso).toLocaleString('en-US', opts);
+  }
+}
+
+// Approved emails held because the send window is shut — and when it opens.
+// Null when nothing is waiting on the window.
+export function sendWindowNotice(campaign) {
+  if (!campaign || campaign.status !== 'active' || campaign.window_open !== false) return null;
+  const waiting = campaign.metrics?.queued_to_send || 0;
+  if (!waiting) return null;
+  const s = campaign.settings || {};
+  const tz = campaign.timezone;
+  const isWeekend = (() => {
+    try {
+      const day = new Date().toLocaleString('en-US', { weekday: 'short', timeZone: tz || undefined });
+      return day === 'Sat' || day === 'Sun';
+    } catch {
+      return false;
+    }
+  })();
+  return {
+    waiting,
+    opensAt: formatWindowTime(campaign.send_window_opens_at, tz),
+    schedule: `${s.send_on_weekends ? 'every day' : 'weekdays'} ${s.send_window_start}–${s.send_window_end}${tz ? ` (${tz})` : ''}`,
+    // Today is a weekend and the campaign skips weekends: offer to include them.
+    canSendWeekends: isWeekend && !s.send_on_weekends,
+  };
+}

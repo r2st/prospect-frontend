@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll, afterEach } from 'vitest';
 import { render, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -11,6 +11,7 @@ const api = {
   prospects: vi.fn(),
   approve: vi.fn(),
   skip: vi.fn(),
+  discover: vi.fn(),
 };
 vi.mock('../api/client', () => ({
   queryClient: { invalidateQueries: vi.fn(), setQueryData: vi.fn(), removeQueries: vi.fn() },
@@ -21,6 +22,7 @@ vi.mock('../api/client', () => ({
     prospects: (...a) => api.prospects(...a),
     approve: (...a) => api.approve(...a),
     skip: (...a) => api.skip(...a),
+    discover: (...a) => api.discover(...a),
   },
   discoveryDocsApi: {},
 }));
@@ -327,5 +329,61 @@ describe('CampaignDashboard', () => {
     expect(within(rows[1]).queryByRole('button', { name: /Edit contact/ })).not.toBeInTheDocument();
     await userEvent.click(within(rows[2]).getByRole('button', { name: 'Add contact at Obsium' }));
     expect(screen.getByRole('dialog', { name: 'Add contact' })).toHaveTextContent('Add a contact at Obsium');
+  });
+
+  it('searches for more prospects on demand', async () => {
+    api.discover.mockResolvedValue({ processing: 'dispatched', searches_today: 1, searches_left: 4 });
+    renderPage();
+    await userEvent.click(await screen.findByRole('button', { name: 'Find more prospects' }));
+    await waitFor(() => expect(api.discover).toHaveBeenCalledWith('c1'));
+    expect(toastMock.success.mock.calls[0][0]).toMatch(/Searching for more companies/);
+  });
+
+  it('offers no search on a paused campaign', async () => {
+    api.get.mockResolvedValue({ ...CAMPAIGN, status: 'paused' });
+    renderPage();
+    await screen.findByText('Q4 machining push');
+    expect(screen.queryByRole('button', { name: 'Find more prospects' })).not.toBeInTheDocument();
+  });
+
+  describe('approved emails waiting for the window', () => {
+    // Sunday 13:00 in Toronto. Only Date is faked, so userEvent still runs.
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date('2026-10-18T17:00:00Z'));
+    });
+    afterEach(() => vi.useRealTimers());
+
+    const WAITING = {
+      ...CAMPAIGN,
+      timezone: 'America/Toronto',
+      window_open: false,
+      send_window_opens_at: '2026-10-19T13:00:00Z',
+      settings: { ...CAMPAIGN.settings, send_window_end: '18:00', send_on_weekends: false },
+      metrics: { ...CAMPAIGN.metrics, queued_to_send: 2 },
+    };
+
+    it('says when they will go out and can include weekends', async () => {
+      api.get.mockResolvedValue(WAITING);
+      api.update.mockResolvedValue({ ...WAITING, send_on_weekends: true });
+      renderPage();
+      const banner = await screen.findByTestId('send-window-banner');
+      expect(banner).toHaveTextContent('2 approved emails are waiting for the send window — next opens Mon, Oct 19, 9:00 AM EDT');
+      expect(banner).toHaveTextContent('sends weekdays 09:00–18:00 (America/Toronto)');
+      await userEvent.click(within(banner).getByRole('button', { name: 'Send on weekends too' }));
+      await waitFor(() => expect(api.update).toHaveBeenCalledWith('c1', { send_on_weekends: true }));
+    });
+
+    it('stays quiet while the window is open or nothing is approved', async () => {
+      api.get.mockResolvedValue({ ...WAITING, window_open: true });
+      const { unmount } = renderPage();
+      await screen.findByText('Q4 machining push');
+      expect(screen.queryByTestId('send-window-banner')).not.toBeInTheDocument();
+      unmount();
+      api.get.mockResolvedValue({ ...WAITING, metrics: { ...WAITING.metrics, queued_to_send: 0 } });
+      renderPage();
+      await screen.findByText('Q4 machining push');
+      expect(screen.queryByTestId('send-window-banner')).not.toBeInTheDocument();
+    });
   });
 });

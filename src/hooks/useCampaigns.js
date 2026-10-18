@@ -263,6 +263,21 @@ export function useRedraftCampaign(id) {
   });
 }
 
+// "Find more prospects": a search runs in the worker; new rows appear as the
+// campaign refetches, so refetch once more after a typical search.
+export function useDiscoverMore(id) {
+  return useMutation({
+    mutationFn: () => campaignsApi.discover(id),
+    onSuccess: () => {
+      toast.success('Searching for more companies — new prospects appear here in a minute or two');
+      setTimeout(() => invalidateCampaign(id), DISCOVERY_REFRESH_MS);
+    },
+    onError: (e) => toast.error(errMsg(e, 'Could not start a search')),
+  });
+}
+
+export const DISCOVERY_REFRESH_MS = 60000;
+
 // Switch one draft to another template (or back to the AI) from its preview.
 export function useRedraftProspect(id) {
   return useMutation({

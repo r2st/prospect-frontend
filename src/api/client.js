@@ -306,6 +306,8 @@ export const campaignsApi = {
     api.post(`/campaigns/${id}/prospects/${pid}/save-template`, body).then(r => r.data),
   // Rewrite the unapproved drafts (after choosing or changing the template).
   redraft: (id) => api.post(`/campaigns/${id}/redraft`).then(r => r.data),
+  // Search for more companies now instead of waiting for tomorrow's search.
+  discover: (id) => api.post(`/campaigns/${id}/discover`).then(r => r.data),
   // Rewrite one draft now from another template: { template_id | null, template_mode }.
   // AI drafting can take a while, hence the longer timeout.
   redraftProspect: (id, pid, body) =>

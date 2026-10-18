@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
+  sendWindowNotice,
   canPause,
   canResume,
   canStop,
@@ -138,5 +139,29 @@ describe('status helpers', () => {
 
   it('formats a fraction as a percent', () => {
     expect(formatPercent(0.0345)).toBe('3.5%');
+  });
+});
+
+describe('sendWindowNotice', () => {
+  const base = {
+    status: 'active', window_open: false, timezone: 'America/Toronto',
+    send_window_opens_at: '2026-10-19T13:00:00Z',
+    settings: { send_window_start: '09:00', send_window_end: '18:00', send_on_weekends: false },
+    metrics: { queued_to_send: 1 },
+  };
+  afterEach(() => vi.useRealTimers());
+
+  it('offers weekends only on a weekend', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-18T17:00:00Z')); // Sunday in Toronto
+    expect(sendWindowNotice(base)).toMatchObject({ waiting: 1, canSendWeekends: true });
+    vi.setSystemTime(new Date('2026-10-14T23:30:00Z')); // Wednesday evening
+    expect(sendWindowNotice(base).canSendWeekends).toBe(false);
+  });
+
+  it('is null when nothing waits on the window', () => {
+    expect(sendWindowNotice({ ...base, window_open: true })).toBeNull();
+    expect(sendWindowNotice({ ...base, status: 'paused' })).toBeNull();
+    expect(sendWindowNotice({ ...base, metrics: { queued_to_send: 0 } })).toBeNull();
   });
 });

@@ -14,6 +14,7 @@ import {
   Pause,
   Pencil,
   Play,
+  Search,
   ShieldCheck,
   SkipForward,
   Square,
@@ -21,9 +22,25 @@ import {
   UserPlus,
   Users,
 } from 'lucide-react';
-import { useCampaign, useCampaignActions, useCampaignProspects, isNotAvailable } from '../hooks/useCampaigns';
+import {
+  isNotAvailable,
+  useCampaign,
+  useCampaignActions,
+  useCampaignProspects,
+  useDiscoverMore,
+  useUpdateCampaign,
+} from '../hooks/useCampaigns';
 import { errMsg } from '../hooks/useDiscoveryDocuments';
-import { EMAIL_ORIGIN, PROSPECT_STATUS, canPause, canResume, canStop, emailVerification, formatPercent } from '../lib/campaigns';
+import {
+  EMAIL_ORIGIN,
+  PROSPECT_STATUS,
+  canPause,
+  canResume,
+  canStop,
+  emailVerification,
+  formatPercent,
+  sendWindowNotice,
+} from '../lib/campaigns';
 import { cn, formatDate, formatNumber } from '../lib/utils';
 import ConfirmDialog from '../components/ConfirmDialog';
 import EmptyState from '../components/EmptyState';
@@ -123,6 +140,39 @@ function ProspectEmail({ p }) {
 }
 
 const SENT = ['sending', 'sent', 'replied', 'bounced'];
+
+// Approved emails don't go out outside the send window; say when they will.
+function SendWindowBanner({ campaign }) {
+  const update = useUpdateCampaign(campaign.id);
+  const notice = sendWindowNotice(campaign);
+  if (!notice) return null;
+  const n = notice.waiting;
+  return (
+    <div role="status" data-testid="send-window-banner"
+      className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-start gap-3">
+        <Clock className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-500" />
+        <p>
+          <span className="font-medium">
+            {n} approved email{n === 1 ? ' is' : 's are'} waiting for the send window
+            {notice.opensAt ? ` — next opens ${notice.opensAt}` : ''}.
+          </span>{' '}
+          This campaign sends {notice.schedule}.
+        </p>
+      </div>
+      {notice.canSendWeekends && (
+        <button
+          type="button"
+          disabled={update.isPending}
+          onClick={() => update.mutate({ send_on_weekends: true })}
+          className="flex-shrink-0 rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-sm font-medium text-amber-900 hover:bg-amber-100 disabled:opacity-50"
+        >
+          {update.isPending ? 'Saving…' : 'Send on weekends too'}
+        </button>
+      )}
+    </div>
+  );
+}
 
 function ProspectActions({ p, busy, onApprove, onSkip, onPreview, onEditContact, onAddAtCompany }) {
   const label = p.contact_name || p.company_name;
@@ -379,6 +429,7 @@ export default function CampaignDashboard() {
   const navigate = useNavigate();
   const { data: campaign, isLoading, error, refetch } = useCampaign(id);
   const actions = useCampaignActions(id);
+  const discover = useDiscoverMore(id);
   const [confirm, setConfirm] = useState(null); // 'stop' | 'delete'
   const [adding, setAdding] = useState(false);
 
@@ -466,6 +517,17 @@ export default function CampaignDashboard() {
               Add contact
             </button>
           )}
+          {status === 'active' && (
+            <button
+              type="button"
+              disabled={discover.isPending}
+              onClick={() => discover.mutate()}
+              className="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-white px-4 py-2 text-sm font-medium text-indigo-700 shadow-sm hover:bg-indigo-50 disabled:opacity-50"
+            >
+              <Search className="h-4 w-4" />
+              {discover.isPending ? 'Starting…' : 'Find more prospects'}
+            </button>
+          )}
           {canPause(status) && (
             <button
               type="button"
@@ -512,6 +574,8 @@ export default function CampaignDashboard() {
           )}
         </div>
       </div>
+
+      <SendWindowBanner campaign={campaign} />
 
       {status === 'active' && campaign.settings.review_before_send && metrics.drafts_pending > 0 && (
         <div className="flex items-start gap-3 rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-800">
