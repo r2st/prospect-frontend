@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Loader2, ShieldCheck } from 'lucide-react';
 import Logo from '../components/Logo';
+import { DoAideFooter } from '../components/DoAideBrand';
 import { useAuth } from '../context/AuthContext';
 
 const MIN_LENGTH = 8;
@@ -56,7 +57,7 @@ export default function ChangePassword() {
     'w-full rounded-lg border border-gray-300 bg-white py-2.5 px-3 text-sm text-gray-900 shadow-sm transition-colors placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500';
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 px-4 py-12">
       <div className="w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center text-center">
           <Logo markSize={40} />
@@ -151,6 +152,7 @@ export default function ChangePassword() {
           </button>
         </form>
       </div>
+      <DoAideFooter className="mt-12 w-full max-w-xl" />
     </div>
   );
 }

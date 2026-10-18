@@ -66,6 +66,7 @@ import ViewAsSwitcher from './ViewAsSwitcher';
 import OrgSwitcher from './OrgSwitcher';
 import ImpersonationBanner from './ImpersonationBanner';
 import Logo, { LogoMark } from './Logo';
+import { DoAideFooter } from './DoAideBrand';
 
 // Sidebar navigation, grouped to match a salesperson's daily flow:
 // plan the day (Workspace) → watch the agent (Dialtone) → build the list
@@ -690,6 +691,7 @@ export default function Layout({ children }) {
         <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
           {children}
         </div>
+        <DoAideFooter className="mx-auto max-w-7xl border-t border-gray-200 px-4 py-6 sm:px-6 lg:px-8" />
       </main>
 
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
