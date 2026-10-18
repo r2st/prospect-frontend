@@ -537,3 +537,41 @@ describe('Inbox draft autosave', () => {
     );
   });
 });
+
+describe('Inbox sender mailbox', () => {
+  const sentFrom = (id, account) => makeThread({
+    gmail_thread_id: id,
+    has_unread: false,
+    messages: [{
+      ...makeThread().messages[0],
+      id: `${id}-m`,
+      direction: 'sent',
+      from_email: account,
+      to_email: 'lead@acme.com',
+      gmail_account_email: account,
+      status: 'sent',
+      is_read: true,
+    }],
+  });
+
+  it('labels each thread with the mailbox it was sent from, across accounts', async () => {
+    mockGetInbox.mockResolvedValue({
+      threads: [sentFrom('t-a', 'subhendu@company.com'), sentFrom('t-b', 'suman@gmail.com')],
+      total: 2, page: 1, per_page: 20,
+    });
+    renderInbox();
+    expect(await screen.findByTitle('Mailbox: subhendu@company.com')).toBeInTheDocument();
+    expect(screen.getByTitle('Mailbox: suman@gmail.com')).toBeInTheDocument();
+  });
+
+  it('shows the From mailbox on a sent message in the conversation', async () => {
+    const user = userEvent.setup();
+    mockGetInbox.mockResolvedValue({
+      threads: [sentFrom('t-a', 'subhendu@company.com')], total: 1, page: 1, per_page: 20,
+    });
+    renderInbox();
+    await user.click(await screen.findByText('Pilot proposal'));
+    const from = await screen.findByText((_, el) => el?.tagName === 'P' && el.textContent === 'From subhendu@company.com');
+    expect(from).toBeInTheDocument();
+  });
+});

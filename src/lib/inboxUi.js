@@ -35,6 +35,30 @@ export function counterpartyEmail(message) {
   return (message.direction === 'sent' ? message.to_email : message.from_email) || '';
 }
 
+// Which of *our* connected mailboxes a message belongs to — the account it was
+// sent from, or received on. The backend tags every message with it; the
+// header addresses are the fallback (``from`` on a send, ``to`` on a reply).
+export function messageAccountEmail(message) {
+  if (!message) return '';
+  return (
+    message.gmail_account_email
+    || (message.direction === 'sent' ? message.from_email : message.to_email)
+    || ''
+  );
+}
+
+// The mailbox a thread lives in. With several connected senders, two threads to
+// the same prospect are otherwise indistinguishable in the list. Latest message
+// wins, matching the row's other "last message" fields.
+export function threadAccountEmail(thread) {
+  const messages = thread?.messages || [];
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const email = messageAccountEmail(messages[i]);
+    if (email) return email;
+  }
+  return '';
+}
+
 /**
  * Derive a single thread-level status for the list pill. Order of precedence:
  *   bounced  → a send in the thread bounced (deliverability problem)

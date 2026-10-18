@@ -27,6 +27,7 @@ import { accountOptionLabel, accountsFromThreads, combineAccounts } from '../lib
 import { timeAgo, cn } from '../lib/utils';
 import {
   fullTimestamp, senderDisplay, counterpartyEmail, threadStatus,
+  messageAccountEmail, threadAccountEmail,
 } from '../lib/inboxUi';
 import {
   labelChipClasses, labelDotClass, snoozePresets, formatSnoozeUntil,
@@ -373,6 +374,7 @@ function ThreadRow({
   const labels = thread.labels || [];
   const person = lastMsg ? senderDisplay(lastMsg) : (thread.lead_name || '');
   const personEmail = lastMsg ? counterpartyEmail(lastMsg) : '';
+  const accountEmail = threadAccountEmail(thread);
 
   return (
     <div
@@ -453,6 +455,15 @@ function ThreadRow({
             </span>
           )}
           {labels.map((label) => <LabelChip key={label.id} label={label} />)}
+          {accountEmail && (
+            <span
+              className="inline-flex min-w-0 items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700 ring-1 ring-inset ring-indigo-600/20"
+              title={`Mailbox: ${accountEmail}`}
+            >
+              <Mail className="h-3 w-3 flex-shrink-0" />
+              <span className="truncate">{accountEmail}</span>
+            </span>
+          )}
           {thread.lead_name && (
             <span className="inline-flex items-center gap-1 text-[11px] text-gray-400">
               <Building2 className="h-3 w-3" />
@@ -490,6 +501,7 @@ function MessageBubble({ message }) {
   const isSent = message.direction === 'sent';
   const person = senderDisplay(message);
   const email = counterpartyEmail(message);
+  const accountEmail = messageAccountEmail(message);
   const htmlBody = message.body_html || null;
 
   return (
@@ -507,6 +519,11 @@ function MessageBubble({ message }) {
           {isSent && message.status && <StatusBadge status={message.status} />}
           {!isSent && <ClassificationChip classification={message.reply_classification} />}
         </div>
+        {accountEmail && (
+          <p className="mt-0.5 text-[11px] text-gray-500">
+            {isSent ? 'From' : 'To'} <span className="font-medium text-gray-700">{accountEmail}</span>
+          </p>
+        )}
         <div className={cn(
           'mt-1 overflow-hidden rounded-2xl px-3.5 py-2.5 text-sm text-gray-800',
           isSent ? 'rounded-tr-sm bg-indigo-50' : 'rounded-tl-sm bg-gray-100'
@@ -862,6 +879,14 @@ function ContactSidebar({ thread, labels, onToggleLabel, onCreateLabel }) {
         )}
 
         <dl className="space-y-2 rounded-lg border border-gray-200 px-3 py-2.5 text-xs">
+          {threadAccountEmail(thread) && (
+            <div className="flex items-center justify-between gap-2">
+              <dt className="flex-shrink-0 text-gray-400">Mailbox</dt>
+              <dd className="truncate font-medium text-gray-700" title={threadAccountEmail(thread)}>
+                {threadAccountEmail(thread)}
+              </dd>
+            </div>
+          )}
           <div className="flex items-center justify-between">
             <dt className="text-gray-400">Messages</dt>
             <dd className="font-medium text-gray-700">{messages.length}</dd>

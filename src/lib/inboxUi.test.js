@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   fullTimestamp, senderDisplay, counterpartyEmail, threadStatus, unreadThreadCount,
+  messageAccountEmail, threadAccountEmail,
 } from './inboxUi';
 
 describe('fullTimestamp', () => {
@@ -69,5 +70,34 @@ describe('unreadThreadCount', () => {
   it('counts threads with has_unread', () => {
     expect(unreadThreadCount([{ has_unread: true }, { has_unread: false }, { has_unread: true }])).toBe(2);
     expect(unreadThreadCount([])).toBe(0);
+  });
+});
+
+describe('messageAccountEmail / threadAccountEmail', () => {
+  it('prefers the backend account tag', () => {
+    expect(messageAccountEmail({
+      direction: 'sent', from_email: 'alias@x.com', gmail_account_email: 'sales@x.com',
+    })).toBe('sales@x.com');
+  });
+
+  it('falls back to from on a send and to on a reply', () => {
+    expect(messageAccountEmail({ direction: 'sent', from_email: 'sales@x.com', to_email: 'lead@y.com' }))
+      .toBe('sales@x.com');
+    expect(messageAccountEmail({ direction: 'received', from_email: 'lead@y.com', to_email: 'sales@x.com' }))
+      .toBe('sales@x.com');
+    expect(messageAccountEmail(null)).toBe('');
+  });
+
+  it("uses the thread's latest message that names an account", () => {
+    const thread = {
+      messages: [
+        { direction: 'sent', gmail_account_email: 'first@x.com' },
+        { direction: 'received', from_email: 'lead@y.com', gmail_account_email: 'second@x.com' },
+        { direction: 'received', from_email: 'lead@y.com' },
+      ],
+    };
+    expect(threadAccountEmail(thread)).toBe('second@x.com');
+    expect(threadAccountEmail({ messages: [] })).toBe('');
+    expect(threadAccountEmail(undefined)).toBe('');
   });
 });
