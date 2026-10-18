@@ -300,6 +300,10 @@ export const campaignsApi = {
     api.post(`/campaigns/${id}/prospects/add`, { contact_ids: contactIds }).then(r => r.data),
   // One person typed in: { company_name, domain?, first_name, last_name?, title?, email? }.
   addManual: (id, data) => api.post(`/campaigns/${id}/prospects/manual`, data).then(r => r.data),
+  // Save a draft as an email template (prospect details → merge fields).
+  // `body` = { name, use_for_campaign?: 'template' | 'ai_template' }.
+  saveTemplate: (id, pid, body) =>
+    api.post(`/campaigns/${id}/prospects/${pid}/save-template`, body).then(r => r.data),
 };
 
 export const aiApi = {

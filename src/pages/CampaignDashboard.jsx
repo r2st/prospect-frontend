@@ -158,7 +158,7 @@ function ProspectActions({ p, busy, onApprove, onSkip, onPreview }) {
   );
 }
 
-function ProspectTable({ campaignId, actions }) {
+function ProspectTable({ campaignId, actions, attachments = [] }) {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState('');
   const [previewing, setPreviewing] = useState(null);
@@ -324,6 +324,8 @@ function ProspectTable({ campaignId, actions }) {
         onApprove={approve}
         onSkip={skip}
         busy={previewing ? busyFor(previewing) : false}
+        attachments={attachments}
+        campaignId={campaignId}
       />
     </div>
   );
@@ -539,7 +541,7 @@ export default function CampaignDashboard() {
       </ErrorBoundary>
 
       <ErrorBoundary resetKey={`${id}:prospects`} fallback={({ reset }) => <SectionFallback reset={reset} />}>
-        <ProspectTable campaignId={id} actions={actions} />
+        <ProspectTable campaignId={id} actions={actions} attachments={campaign.attachments || []} />
       </ErrorBoundary>
 
       {adding && <AddContactModal campaignId={id} onClose={() => setAdding(false)} />}

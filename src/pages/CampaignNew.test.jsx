@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const docs = { list: vi.fn(), get: vi.fn(), uploadMany: vi.fn() };
-const camp = { get: vi.fn(), create: vi.fn(), update: vi.fn(), senders: vi.fn() };
+const camp = { get: vi.fn(), create: vi.fn(), update: vi.fn(), senders: vi.fn(), templates: vi.fn() };
 vi.mock('../api/client', () => ({
   queryClient: { invalidateQueries: vi.fn(), setQueryData: vi.fn(), removeQueries: vi.fn() },
   discoveryDocsApi: {
@@ -19,6 +19,7 @@ vi.mock('../api/client', () => ({
     update: (...a) => camp.update(...a),
     senders: (...a) => camp.senders(...a),
   },
+  emailApi: { getTemplates: (...a) => camp.templates(...a) },
 }));
 const toastMock = vi.hoisted(() => Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }));
 vi.mock('react-hot-toast', () => ({ default: toastMock }));
@@ -69,10 +70,32 @@ describe('CampaignNew wizard', () => {
     camp.get.mockResolvedValue(CAMPAIGN);
     camp.create.mockResolvedValue(CAMPAIGN);
     camp.update.mockImplementation((id, body) => Promise.resolve({ ...CAMPAIGN, ...body }));
+    camp.templates.mockResolvedValue([
+      { id: 't1', name: 'SRE intro', is_archived: false },
+      { id: 't2', name: 'Old one', is_archived: true },
+    ]);
     camp.senders.mockResolvedValue([
       { id: 'g1', kind: 'gmail', email: 'me@ourco.com', mine: true },
       { id: 's1', kind: 'smtp', email: 'outbound@ourco.com', mine: false },
     ]);
+  });
+
+  it('attaches documents and drafts from a chosen template', async () => {
+    camp.get.mockResolvedValue({ ...CAMPAIGN, attachments: ['deck.pdf'], attach_documents: false });
+    renderAt('/campaigns/new?id=c1&step=2');
+    expect(await screen.findByText(/Every email carries deck.pdf/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('switch', { name: 'Attach campaign documents' }));
+    const select = screen.getByLabelText('Email template');
+    await waitFor(() => expect(within(select).getAllByRole('option')).toHaveLength(2)); // archived hidden
+    await userEvent.selectOptions(select, 't1');
+    // Choosing a template defaults to AI personalisation; switch to "as written".
+    expect(screen.getByRole('radio', { name: /Personalise with AI/ })).toBeChecked();
+    await userEvent.click(screen.getByRole('radio', { name: /Use exactly as written/ }));
+    await userEvent.click(screen.getByRole('button', { name: /^Next/ }));
+    await waitFor(() => expect(camp.update).toHaveBeenCalled());
+    expect(camp.update.mock.calls[0][1]).toMatchObject({
+      attach_documents: true, template_id: 't1', template_mode: 'template',
+    });
   });
 
   it('lets you pick which mailbox the campaign sends from', async () => {
@@ -213,6 +236,9 @@ describe('CampaignNew wizard', () => {
         send_window_end: '18:00',
         send_on_weekends: true,
         review_before_send: false,
+        attach_documents: false,
+        template_id: null,
+        template_mode: 'ai',
       })
     );
   });

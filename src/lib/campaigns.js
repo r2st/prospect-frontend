@@ -121,6 +121,12 @@ export function toCampaignPatch(data = {}) {
     out.send_on_weekends = settings.send_on_weekends;
     out.review_before_send = settings.review_before_send;
     if (settings.sender_account_id) out.sender_account_id = settings.sender_account_id;
+    if (settings.attach_documents !== undefined) out.attach_documents = settings.attach_documents;
+    if (settings.template_mode !== undefined) {
+      // No template means the AI writes the drafts, whatever mode was picked.
+      out.template_id = settings.template_id || null;
+      out.template_mode = settings.template_id ? settings.template_mode : 'ai';
+    }
   }
   if (icp) {
     out.icp_json = {
@@ -150,6 +156,10 @@ export function normalizeSettings(raw) {
     review_before_send: Boolean(s.review_before_send ?? DEFAULT_SETTINGS.review_before_send),
     // Gmail or SMTP; whichever column the campaign holds.
     sender_account_id: s.sender_account_id || s.gmail_account_id || s.smtp_account_id || '',
+    attach_documents: Boolean(s.attach_documents),
+    // '' = no template; 'ai' | 'template' | 'ai_template'.
+    template_id: s.template_id || '',
+    template_mode: s.template_mode || 'ai',
   };
 }
 

@@ -31,6 +31,13 @@ describe('campaign edits use the API field names', () => {
     });
   });
 
+  it('sends attachment and template choices, and a cleared template means AI drafting', () => {
+    expect(toCampaignPatch({ settings: { attach_documents: true, template_id: 't1', template_mode: 'template' } }))
+      .toEqual({ attach_documents: true, template_id: 't1', template_mode: 'template' });
+    expect(toCampaignPatch({ settings: { template_id: '', template_mode: 'template' } }))
+      .toEqual({ template_id: null, template_mode: 'ai' });
+  });
+
   it('passes other fields (status, name) through untouched', () => {
     expect(toCampaignPatch({ status: 'paused', name: 'N' })).toEqual({ status: 'paused', name: 'N' });
   });

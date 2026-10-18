@@ -237,3 +237,15 @@ export function useAddManualProspect(id) {
     onError: (e) => toast.error(errMsg(e, 'Could not add that contact')),
   });
 }
+
+export function useSaveDraftAsTemplate(campaignId) {
+  return useMutation({
+    mutationFn: ({ prospectId, ...body }) => campaignsApi.saveTemplate(campaignId, prospectId, body),
+    onSuccess: (t, { use_for_campaign: use }) => {
+      queryClient.invalidateQueries({ queryKey: ['email-templates'] });
+      invalidateCampaign(campaignId);
+      toast.success(use ? `Saved "${t.name}" — the rest of this campaign will use it` : `Saved template "${t.name}"`);
+    },
+    onError: (e) => toast.error(errMsg(e, 'Could not save the template')),
+  });
+}
