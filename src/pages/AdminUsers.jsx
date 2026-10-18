@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { Loader2, UserPlus, ShieldAlert, KeyRound, X } from 'lucide-react';
+import { Loader2, UserPlus, ShieldAlert, KeyRound, Trash2, X } from 'lucide-react';
 import { adminUsersApi } from '../api/auth';
 import { useAuth } from '../context/AuthContext';
 import { ROLE_LABEL, normalizeRole } from '../lib/roles';
@@ -25,6 +25,8 @@ export default function AdminUsers() {
   const [form, setForm] = useState(EMPTY_FORM);
   // The user whose password is being reset (null = modal closed).
   const [resetTarget, setResetTarget] = useState(null);
+  // The user awaiting delete confirmation (null = modal closed).
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const { data: users = [], isLoading, isError } = useQuery({
     queryKey: ['admin-users'],
@@ -81,6 +83,18 @@ export default function AdminUsers() {
     },
     onError: (err) => {
       toast.error(err?.response?.data?.detail || 'Could not update user');
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => adminUsersApi.remove(id),
+    onSuccess: () => {
+      toast.success('User deleted');
+      setDeleteTarget(null);
+      invalidate();
+    },
+    onError: (err) => {
+      toast.error(err?.response?.data?.detail || 'Could not delete user');
     },
   });
 
@@ -258,6 +272,16 @@ export default function AdminUsers() {
                           >
                             {u.is_active ? 'Deactivate' : 'Activate'}
                           </button>
+                          <button
+                            type="button"
+                            disabled={isSelf || deleteMutation.isPending}
+                            onClick={() => setDeleteTarget(u)}
+                            aria-label={`Delete ${u.name}`}
+                            title={isSelf ? 'You cannot delete your own account' : ''}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" /> Delete
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -279,6 +303,74 @@ export default function AdminUsers() {
           }
         />
       )}
+
+      {deleteTarget && (
+        <DeleteUserModal
+          user={deleteTarget}
+          isPending={deleteMutation.isPending}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={() => deleteMutation.mutate(deleteTarget.id)}
+        />
+      )}
+    </div>
+  );
+}
+
+function DeleteUserModal({ user, isPending, onClose, onConfirm }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4"
+      onMouseDown={onClose}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="delete-user-title"
+        className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <div className="mb-4 flex items-start justify-between">
+          <div className="flex items-center gap-2">
+            <Trash2 className="h-5 w-5 text-red-600" />
+            <h2 id="delete-user-title" className="text-base font-semibold text-gray-900">
+              Delete user?
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <p className="text-sm text-gray-500">
+          <span className="font-medium text-gray-900">{user.name}</span>{' '}
+          <span className="text-gray-400">({user.email})</span> will lose access immediately and
+          be removed from this list. Their emails, tasks and deals keep their history.
+        </p>
+
+        <div className="flex justify-end gap-2 pt-5">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={onConfirm}
+            className="flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-60"
+          >
+            {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+            Delete user
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

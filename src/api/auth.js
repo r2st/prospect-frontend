@@ -48,7 +48,8 @@ export const adminUsersApi = {
   list: () => api.get('/admin/users').then((r) => r.data),
   create: (payload) => api.post('/admin/users', payload).then((r) => r.data),
   update: (id, payload) => api.patch(`/admin/users/${id}`, payload).then((r) => r.data),
-  deactivate: (id) => api.delete(`/admin/users/${id}`).then((r) => r.data),
+  // Soft delete: the account is deactivated and hidden; its history stays.
+  remove: (id) => api.delete(`/admin/users/${id}`).then((r) => r.data),
   resetPassword: (id, newPassword, mustChangePassword = true) =>
     api
       .post(`/admin/users/${id}/reset-password`, {
