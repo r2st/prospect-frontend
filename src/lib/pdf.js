@@ -23,7 +23,18 @@ export function loadPdfjs() {
   return loading;
 }
 
+// Copied into the build by vite.config.js (pdfjsAssets). Needed because glyphs
+// are drawn by pdf.js: a PDF set in a standard, non-embedded font (Helvetica)
+// otherwise renders its images and none of its text.
+export const PDF_OPTIONS = {
+  isEvalSupported: false,
+  disableFontFace: true,
+  standardFontDataUrl: '/pdfjs/standard_fonts/',
+  cMapUrl: '/pdfjs/cmaps/',
+  cMapPacked: true,
+};
+
 export async function openPdf(data) {
   const pdfjs = await loadPdfjs();
-  return pdfjs.getDocument({ data, isEvalSupported: false, disableFontFace: true }).promise;
+  return pdfjs.getDocument({ data, ...PDF_OPTIONS }).promise;
 }
