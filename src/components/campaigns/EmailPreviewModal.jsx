@@ -4,6 +4,7 @@ import { BookmarkPlus, Check, Download, Loader2, Mail, Paperclip, SkipForward, X
 import { campaignsApi } from '../../api/client';
 import { useSaveDraftAsTemplate } from '../../hooks/useCampaigns';
 import PdfPreview from './PdfPreview';
+import SenderLine from './SenderLine';
 
 // One attachment, opened: a PDF renders in place, anything else downloads.
 export function AttachmentViewer({ campaignId, name }) {
@@ -94,7 +95,9 @@ export function SaveTemplateForm({ campaignId, prospect, onSaved }) {
 
 // The generated email for one prospect, as it will be (or was) sent. Drafts can
 // be approved or skipped from here without going back to the table.
-export default function EmailPreviewModal({ prospect, onClose, onApprove, onSkip, busy, attachments = [], campaignId }) {
+export default function EmailPreviewModal({
+  prospect, onClose, onApprove, onSkip, busy, attachments = [], campaignId, sender = null,
+}) {
   const [saving, setSaving] = useState(false);
   const [opened, setOpened] = useState(null);
   useEffect(() => setOpened(null), [prospect?.id]);
@@ -144,6 +147,11 @@ export default function EmailPreviewModal({ prospect, onClose, onApprove, onSkip
         </div>
 
         <div className="overflow-y-auto px-5 py-4">
+          <SenderLine
+            sender={sender}
+            sentFrom={['sent', 'replied', 'bounced'].includes(prospect.status) ? prospect.sent_from : null}
+            className="mb-4 rounded-lg border border-indigo-100 bg-indigo-50/50 px-3 py-2"
+          />
           {hasEmail ? (
             <>
               <p className="text-xs font-medium uppercase tracking-wider text-gray-400">Subject</p>

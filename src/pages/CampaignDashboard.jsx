@@ -12,6 +12,7 @@ import {
   Mail,
   MessageSquareReply,
   Pause,
+  Pencil,
   Play,
   ShieldCheck,
   SkipForward,
@@ -31,6 +32,9 @@ import MetricCard from '../components/MetricCard';
 import Skeleton from '../components/Skeleton';
 import EmailPreviewModal from '../components/campaigns/EmailPreviewModal';
 import AddContactModal from '../components/campaigns/AddContactModal';
+import ContactEditModal from '../components/campaigns/ContactEditModal';
+import SenderLine from '../components/campaigns/SenderLine';
+import TemplatePanel from '../components/campaigns/TemplatePanel';
 import { CampaignStatusBadge, ProspectStatusBadge } from '../components/campaigns/StatusBadge';
 
 const PAGE_SIZE = 25;
@@ -118,10 +122,35 @@ function ProspectEmail({ p }) {
   );
 }
 
-function ProspectActions({ p, busy, onApprove, onSkip, onPreview }) {
+const SENT = ['sending', 'sent', 'replied', 'bounced'];
+
+function ProspectActions({ p, busy, onApprove, onSkip, onPreview, onEditContact, onAddAtCompany }) {
   const label = p.contact_name || p.company_name;
+  const editable = !SENT.includes(p.status);
   return (
     <div className="flex items-center justify-end gap-1">
+      {editable && onEditContact && (
+        <button
+          type="button"
+          onClick={() => onEditContact(p)}
+          aria-label={p.contact_id ? `Edit contact ${label}` : `Add contact at ${p.company_name}`}
+          title={p.contact_id ? 'Edit contact' : 'Add contact'}
+          className="rounded-md p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+        >
+          {p.contact_id ? <Pencil className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
+        </button>
+      )}
+      {p.contact_id && onAddAtCompany && p.company_id && (
+        <button
+          type="button"
+          onClick={() => onAddAtCompany(p)}
+          aria-label={`Add another contact at ${p.company_name}`}
+          title="Add another contact at this company"
+          className="rounded-md p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+        >
+          <Users className="h-4 w-4" />
+        </button>
+      )}
       {p.status === 'draft' && (
         <button
           type="button"
@@ -158,10 +187,12 @@ function ProspectActions({ p, busy, onApprove, onSkip, onPreview }) {
   );
 }
 
-function ProspectTable({ campaignId, actions, attachments = [] }) {
+function ProspectTable({ campaignId, actions, attachments = [], sender = null }) {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState('');
   const [previewing, setPreviewing] = useState(null);
+  const [editing, setEditing] = useState(null);
+  const [addingAt, setAddingAt] = useState(null);
   const { data, isLoading, error, isFetching } = useCampaignProspects(campaignId, { page, pageSize: PAGE_SIZE, status });
   const items = data?.items ?? [];
   const pages = data?.pages ?? 1;
@@ -243,7 +274,7 @@ function ProspectTable({ campaignId, actions, attachments = [] }) {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-gray-500">{p.sent_at ? `Sent ${formatDate(p.sent_at)}` : 'Not sent'}</span>
-                  <ProspectActions p={p} busy={busyFor(p)} onApprove={approve} onSkip={skip} onPreview={setPreviewing} />
+                  <ProspectActions onEditContact={setEditing} onAddAtCompany={setAddingAt} p={p} busy={busyFor(p)} onApprove={approve} onSkip={skip} onPreview={setPreviewing} />
                 </div>
               </li>
             ))}
@@ -284,7 +315,7 @@ function ProspectTable({ campaignId, actions, attachments = [] }) {
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{formatDate(p.sent_at)}</td>
                     <td className="whitespace-nowrap px-4 py-3">
-                      <ProspectActions p={p} busy={busyFor(p)} onApprove={approve} onSkip={skip} onPreview={setPreviewing} />
+                      <ProspectActions onEditContact={setEditing} onAddAtCompany={setAddingAt} p={p} busy={busyFor(p)} onApprove={approve} onSkip={skip} onPreview={setPreviewing} />
                     </td>
                   </tr>
                 ))}
@@ -326,7 +357,16 @@ function ProspectTable({ campaignId, actions, attachments = [] }) {
         busy={previewing ? busyFor(previewing) : false}
         attachments={attachments}
         campaignId={campaignId}
+        sender={sender}
       />
+      {editing && <ContactEditModal campaignId={campaignId} prospect={editing} onClose={() => setEditing(null)} />}
+      {addingAt && (
+        <AddContactModal
+          campaignId={campaignId}
+          initial={{ company_name: addingAt.company_name, domain: addingAt.company_domain || '' }}
+          onClose={() => setAddingAt(null)}
+        />
+      )}
     </div>
   );
 }
@@ -384,6 +424,7 @@ export default function CampaignDashboard() {
             <h1 className="truncate text-2xl font-bold text-gray-900">{campaign.name}</h1>
             <CampaignStatusBadge status={status} />
           </div>
+          <SenderLine sender={campaign.sender || null} className="mt-1.5" />
           <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500">
             {campaign.documents.length > 0 && (
               <span className="inline-flex items-center gap-1">
@@ -536,12 +577,15 @@ export default function CampaignDashboard() {
         </div>
       </div>
 
+      <TemplatePanel key={`${campaign.template_id || ''}:${campaign.template_mode || ''}`} campaign={campaign} draftsPending={campaign.metrics?.drafts_pending || 0} />
+
       <ErrorBoundary resetKey={`${id}:chart`} fallback={({ reset }) => <SectionFallback reset={reset} />}>
         <DailyChart data={campaign.daily} />
       </ErrorBoundary>
 
       <ErrorBoundary resetKey={`${id}:prospects`} fallback={({ reset }) => <SectionFallback reset={reset} />}>
-        <ProspectTable campaignId={id} actions={actions} attachments={campaign.attachments || []} />
+        <ProspectTable campaignId={id} actions={actions} attachments={campaign.attachments || []}
+          sender={campaign.sender || null} />
       </ErrorBoundary>
 
       {adding && <AddContactModal campaignId={id} onClose={() => setAdding(false)} />}

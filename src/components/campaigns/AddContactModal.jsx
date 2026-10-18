@@ -12,8 +12,9 @@ const field =
  * With no email, Hunter looks for one at the company's website; either way the
  * address is verified before anything is drafted or sent.
  */
-export default function AddContactModal({ campaignId, onClose }) {
-  const [form, setForm] = useState(EMPTY);
+export default function AddContactModal({ campaignId, onClose, initial = null }) {
+  // `initial` prefills the company, for "add another contact at this company".
+  const [form, setForm] = useState({ ...EMPTY, ...(initial || {}) });
   const add = useAddManualProspect(campaignId);
   const set = (key) => (e) => setForm((p) => ({ ...p, [key]: e.target.value }));
   const noWayToEmail = !form.email.trim() && !form.domain.trim();
@@ -32,7 +33,9 @@ export default function AddContactModal({ campaignId, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" role="dialog" aria-modal="true" aria-label="Add a contact">
       <form onSubmit={submit} className="w-full max-w-lg rounded-xl bg-white p-5 shadow-xl">
-        <h3 className="text-base font-semibold text-gray-900">Add a contact to this campaign</h3>
+        <h3 className="text-base font-semibold text-gray-900">
+          {initial?.company_name ? `Add another contact at ${initial.company_name}` : 'Add a contact to this campaign'}
+        </h3>
         <p className="mt-1 text-sm text-gray-600">
           No email? Give the company&apos;s website and Hunter will look for one. Every address is verified before anything is sent. To add people you already have,{' '}
           <Link to="/contacts" className="font-medium text-indigo-600 hover:underline">pick them from Contacts</Link>.

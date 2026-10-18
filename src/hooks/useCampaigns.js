@@ -249,3 +249,30 @@ export function useSaveDraftAsTemplate(campaignId) {
     onError: (e) => toast.error(errMsg(e, 'Could not save the template')),
   });
 }
+
+export function useRedraftCampaign(id) {
+  return useMutation({
+    mutationFn: () => campaignsApi.redraft(id),
+    onSuccess: (r) => {
+      invalidateCampaign(id);
+      toast.success(r.redrafting
+        ? `Re-drafting ${r.redrafting} email${r.redrafting === 1 ? '' : 's'} with the current template`
+        : 'No unapproved drafts to rewrite');
+    },
+    onError: (e) => toast.error(errMsg(e, 'Could not re-draft')),
+  });
+}
+
+export function useSetProspectContact(id) {
+  return useMutation({
+    mutationFn: ({ prospectId, ...data }) => campaignsApi.setContact(id, prospectId, data),
+    onSuccess: (r) => {
+      invalidateCampaign(id);
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      if (r.skipped?.length) toast.error(`Saved, but it can't be emailed: ${r.skipped[0].label}`);
+      else if (r.queued) toast.success('Saved — verifying the address and re-drafting the email');
+      else toast.success('Contact saved');
+    },
+    onError: (e) => toast.error(errMsg(e, 'Could not save the contact')),
+  });
+}

@@ -303,4 +303,29 @@ describe('CampaignDashboard', () => {
       expect(api.prospects).toHaveBeenLastCalledWith('c1', { page: 1, page_size: 25, status: 'draft_created' })
     );
   });
+
+  it('edits contacts on unsent rows and adds one where discovery found nobody', async () => {
+    api.get.mockResolvedValue({
+      ...CAMPAIGN,
+      sender: { email: 'me@sender.io', kind: 'gmail', ready: true },
+    });
+    api.prospects.mockResolvedValue({
+      ...PROSPECTS,
+      items: [
+        { ...PROSPECTS.items[0], contact_id: 'ct1', company_id: 'co1' },
+        { ...PROSPECTS.items[1], contact_id: 'ct2', company_id: 'co2' },
+        { id: 'p3', status: 'no_email', company_name: 'Obsium', company_id: 'co3', contact_id: null },
+      ],
+      total: 3,
+    });
+    renderPage();
+    expect((await screen.findAllByTestId('sender-line'))[0]).toHaveTextContent('me@sender.io');
+    const rows = await screen.findAllByTestId('prospect-row');
+    expect(within(rows[0]).getByRole('button', { name: 'Edit contact Ana Li' })).toBeInTheDocument();
+    expect(within(rows[0]).getByRole('button', { name: 'Add another contact at Acme Tooling' })).toBeInTheDocument();
+    // What went out stays as it was sent.
+    expect(within(rows[1]).queryByRole('button', { name: /Edit contact/ })).not.toBeInTheDocument();
+    await userEvent.click(within(rows[2]).getByRole('button', { name: 'Add contact at Obsium' }));
+    expect(screen.getByRole('dialog', { name: 'Add contact' })).toHaveTextContent('Add a contact at Obsium');
+  });
 });
