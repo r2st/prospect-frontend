@@ -2,15 +2,25 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 
 const saveTemplate = vi.fn();
 const attachment = vi.fn();
+const redraftProspect = vi.fn();
+const TEMPLATES = vi.hoisted(() => [
+  { id: 't1', name: 'SRE intro', subject: '{{first_name}}, quick one about {{company}}',
+    body: '<p>Hi {{first_name}},</p><p>Saw {{ company }} is scaling SRE.</p>', is_archived: false },
+  { id: 't2', name: 'Follow-up', subject: 'Following up', body: '<p>Hi there</p>', is_archived: false },
+  { id: 't3', name: 'Retired', subject: 'x', body: 'x', is_archived: true },
+]);
 vi.mock('../../api/client', () => ({
   queryClient: { invalidateQueries: vi.fn() },
   campaignsApi: {
     saveTemplate: (...a) => saveTemplate(...a),
     attachment: (...a) => attachment(...a),
+    redraftProspect: (...a) => redraftProspect(...a),
   },
+  emailApi: { getTemplates: async () => TEMPLATES },
 }));
 
 // pdf.js needs a real canvas and worker; jsdom has neither. Stand in a
@@ -46,7 +56,9 @@ function renderModal(props = {}) {
   const qc = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
-      <EmailPreviewModal prospect={PROSPECT} onClose={vi.fn()} onApprove={vi.fn()} onSkip={vi.fn()} {...props} />
+      <MemoryRouter>
+        <EmailPreviewModal prospect={PROSPECT} onClose={vi.fn()} onApprove={vi.fn()} onSkip={vi.fn()} {...props} />
+      </MemoryRouter>
     </QueryClientProvider>,
   );
 }
@@ -55,6 +67,7 @@ describe('EmailPreviewModal', () => {
   beforeEach(() => {
     saveTemplate.mockReset();
     attachment.mockReset();
+    redraftProspect.mockReset();
     toastMock.success.mockReset();
     pdf.rendered = [];
     pdf.fail = false;
@@ -132,5 +145,66 @@ describe('EmailPreviewModal', () => {
     await userEvent.type(screen.getByLabelText('Template name'), 'Keep');
     await userEvent.click(screen.getByRole('button', { name: 'Save template' }));
     await waitFor(() => expect(saveTemplate).toHaveBeenCalledWith('c1', 'p1', { name: 'Keep' }));
+  });
+
+  it('links to the saved template in Outreach → Templates', async () => {
+    saveTemplate.mockResolvedValue({ id: 't9', name: 'Mine' });
+    renderModal({ campaignId: 'c1' });
+    await userEvent.click(screen.getByRole('button', { name: /Save as template/ }));
+    await userEvent.type(screen.getByLabelText('Template name'), 'Mine');
+    await userEvent.click(screen.getByRole('button', { name: 'Save template' }));
+    expect(await screen.findByTestId('template-saved')).toHaveTextContent('Saved as “Mine”');
+    expect(screen.getByRole('link', { name: /Open in Outreach → Templates/ })).toHaveAttribute('href', '/outreach?tab=templates');
+  });
+
+  it('says the AI wrote a draft that has no template', () => {
+    renderModal({ campaignId: 'c1' });
+    expect(screen.getByTestId('draft-source')).toHaveTextContent('Written by the AI');
+    expect(screen.queryByRole('group', { name: 'Show draft or template' })).not.toBeInTheDocument();
+  });
+
+  it('shows the template a draft came from with its merge fields visible', async () => {
+    renderModal({ campaignId: 'c1', prospect: { ...PROSPECT, template_id: 't1', template_name: 'SRE intro' } });
+    expect(screen.getByTestId('draft-source')).toHaveTextContent('Drafted from “SRE intro”');
+    await userEvent.click(await screen.findByRole('button', { name: 'Template' }));
+    expect(screen.getByTestId('template-subject')).toHaveTextContent('{{first_name}}, quick one about {{company}}');
+    const body = screen.getByTestId('template-body');
+    const fields = [...body.querySelectorAll('.merge-field')].map((n) => n.textContent);
+    expect(fields).toEqual(['{{first_name}}', '{{ company }}']);
+    expect(screen.getByTestId('merge-fields')).toHaveTextContent('{{first_name}}');
+    expect(screen.getByTestId('merge-fields')).toHaveTextContent('{{company}}');
+    await userEvent.click(screen.getByRole('button', { name: 'Draft' }));
+    expect(screen.getByTestId('preview-subject')).toHaveTextContent('Partnering on DevOps automation');
+  });
+
+  it('switches one draft to another template', async () => {
+    redraftProspect.mockResolvedValue({ id: 'p1', template_id: 't2', template_name: 'Follow-up' });
+    renderModal({ campaignId: 'c1', prospect: { ...PROSPECT, template_id: 't1' } });
+    const select = await screen.findByLabelText('Re-draft this email from a template');
+    // Archived templates are not offered.
+    expect(screen.queryByRole('option', { name: 'Retired' })).not.toBeInTheDocument();
+    await userEvent.selectOptions(select, 't2');
+    await userEvent.click(screen.getByLabelText('Personalised by AI'));
+    await userEvent.click(screen.getByRole('button', { name: 'Re-draft' }));
+    await waitFor(() => expect(redraftProspect).toHaveBeenCalledWith('c1', 'p1', {
+      template_id: 't2', template_mode: 'ai_template',
+    }));
+    expect(toastMock.success).toHaveBeenCalledWith('Re-drafted from "Follow-up"');
+  });
+
+  it('can hand a draft back to the AI', async () => {
+    redraftProspect.mockResolvedValue({ id: 'p1', template_id: null });
+    renderModal({ campaignId: 'c1', prospect: { ...PROSPECT, template_id: 't1' } });
+    await userEvent.selectOptions(await screen.findByLabelText('Re-draft this email from a template'), '');
+    await userEvent.click(screen.getByRole('button', { name: 'Re-draft' }));
+    await waitFor(() => expect(redraftProspect).toHaveBeenCalledWith('c1', 'p1', {
+      template_id: null, template_mode: 'template',
+    }));
+  });
+
+  it('offers no template switch on a sent email', async () => {
+    renderModal({ campaignId: 'c1', prospect: { ...PROSPECT, status: 'sent' } });
+    await screen.findByTestId('draft-source');
+    expect(screen.queryByTestId('draft-template-switcher')).not.toBeInTheDocument();
   });
 });

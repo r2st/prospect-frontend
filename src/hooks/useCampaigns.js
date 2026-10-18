@@ -263,6 +263,18 @@ export function useRedraftCampaign(id) {
   });
 }
 
+// Switch one draft to another template (or back to the AI) from its preview.
+export function useRedraftProspect(id) {
+  return useMutation({
+    mutationFn: ({ prospectId, ...body }) => campaignsApi.redraftProspect(id, prospectId, body),
+    onSuccess: (p) => {
+      invalidateCampaign(id);
+      toast.success(p?.template_name ? `Re-drafted from "${p.template_name}"` : 'Re-drafted by the AI');
+    },
+    onError: (e) => toast.error(errMsg(e, 'Could not re-draft this email')),
+  });
+}
+
 export function useSetProspectContact(id) {
   return useMutation({
     mutationFn: ({ prospectId, ...data }) => campaignsApi.setContact(id, prospectId, data),

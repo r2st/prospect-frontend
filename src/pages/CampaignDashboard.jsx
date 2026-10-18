@@ -200,6 +200,8 @@ function ProspectTable({ campaignId, actions, attachments = [], sender = null })
   const approve = (p) => actions.approve(p.id, { onSuccess: () => setPreviewing(null) });
   const skip = (p) => actions.skip(p.id, { onSuccess: () => setPreviewing(null) });
   const busyFor = (p) => actions.pendingProspect === p.id;
+  // The open preview follows refetches, so a re-draft or a save shows at once.
+  const shown = previewing ? items.find((p) => p.id === previewing.id) || previewing : null;
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
@@ -350,11 +352,12 @@ function ProspectTable({ campaignId, actions, attachments = [], sender = null })
       )}
 
       <EmailPreviewModal
-        prospect={previewing}
+        key={shown?.id || 'closed'}
+        prospect={shown}
         onClose={() => setPreviewing(null)}
         onApprove={approve}
         onSkip={skip}
-        busy={previewing ? busyFor(previewing) : false}
+        busy={shown ? busyFor(shown) : false}
         attachments={attachments}
         campaignId={campaignId}
         sender={sender}

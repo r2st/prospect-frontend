@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FileText, RefreshCw } from 'lucide-react';
 import TemplateChoice from './TemplateChoice';
+import { MergeFieldList } from '../MergeFieldText';
 import { useRedraftCampaign, useUpdateCampaign } from '../../hooks/useCampaigns';
 import { useEmailTemplates } from '../../hooks/useEmailTemplates';
 
@@ -34,6 +35,9 @@ export default function TemplatePanel({ campaign, draftsPending = 0 }) {
               ? `Drafting from “${current.name}” — ${campaign.template_mode === 'template' ? 'exactly as written' : 'personalised by AI'}`
               : 'The AI writes each email. Pick a template to use your own wording.'}
           </p>
+          {campaign.template_id && current && (
+            <MergeFieldList subject={current.subject} body={current.body} className="mt-1" />
+          )}
         </div>
         <Link to="/outreach?tab=templates" className="text-xs font-medium text-indigo-600 hover:underline">
           Manage templates
@@ -68,7 +72,7 @@ export default function TemplatePanel({ campaign, draftsPending = 0 }) {
         )}
       </div>
       <p className="mt-2 text-xs text-gray-500">
-        A draft can also become a template: open it and choose “Save as template”. It appears in Outreach → Templates straight away.
+        To switch one email to another template, open its preview. A draft can also become a template there (“Save as template”) — it appears in Outreach → Templates straight away.
       </p>
     </section>
   );

@@ -306,6 +306,10 @@ export const campaignsApi = {
     api.post(`/campaigns/${id}/prospects/${pid}/save-template`, body).then(r => r.data),
   // Rewrite the unapproved drafts (after choosing or changing the template).
   redraft: (id) => api.post(`/campaigns/${id}/redraft`).then(r => r.data),
+  // Rewrite one draft now from another template: { template_id | null, template_mode }.
+  // AI drafting can take a while, hence the longer timeout.
+  redraftProspect: (id, pid, body) =>
+    api.post(`/campaigns/${id}/prospects/${pid}/redraft`, body, { timeout: 90000 }).then(r => r.data),
   // Add or edit the person behind a prospect: { first_name, last_name?, title?, email? }.
   setContact: (id, pid, data) => api.put(`/campaigns/${id}/prospects/${pid}/contact`, data).then(r => r.data),
   // The bytes of one file the campaign's emails carry, for the draft preview.

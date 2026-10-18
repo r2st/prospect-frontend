@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { BookmarkPlus, Check, Download, Loader2, Mail, Paperclip, SkipForward, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { BookmarkPlus, Check, Download, FileText, Loader2, Mail, Paperclip, RefreshCw, SkipForward, X } from 'lucide-react';
 import { campaignsApi } from '../../api/client';
-import { useSaveDraftAsTemplate } from '../../hooks/useCampaigns';
+import { useRedraftProspect, useSaveDraftAsTemplate } from '../../hooks/useCampaigns';
+import { useEmailTemplates } from '../../hooks/useEmailTemplates';
+import { highlightMergeFields } from '../../lib/mergeFields';
+import { MergeFieldList, MergeFieldText } from '../MergeFieldText';
 import PdfPreview from './PdfPreview';
 import SenderLine from './SenderLine';
 
@@ -60,8 +64,8 @@ export function SaveTemplateForm({ campaignId, prospect, onSaved }) {
   const submit = async (e) => {
     e.preventDefault();
     if (!name.trim()) return;
-    await save.mutateAsync({ prospectId: prospect.id, name: name.trim(), ...(use ? { use_for_campaign: use } : {}) });
-    onSaved?.();
+    const t = await save.mutateAsync({ prospectId: prospect.id, name: name.trim(), ...(use ? { use_for_campaign: use } : {}) });
+    onSaved?.(t);
   };
   return (
     <form onSubmit={submit} className="mt-4 space-y-2 rounded-lg border border-indigo-100 bg-indigo-50/40 p-3">
@@ -93,14 +97,90 @@ export function SaveTemplateForm({ campaignId, prospect, onSaved }) {
   );
 }
 
+// Rewrite this one draft from another template, or let the AI write it. The
+// campaign's own template is left alone.
+export function DraftTemplateSwitcher({ campaignId, prospect, templates }) {
+  // Keyed on the draft's template by the caller, so a re-draft resets the choice.
+  const [templateId, setTemplateId] = useState(prospect.template_id || '');
+  const [mode, setMode] = useState('template');
+  const redraft = useRedraftProspect(campaignId);
+  const unchanged = templateId === (prospect.template_id || '') && mode === 'template';
+  return (
+    <div className="mt-4 rounded-lg border border-gray-200 p-3" data-testid="draft-template-switcher">
+      <label htmlFor="draft-template" className="block text-xs font-medium text-gray-600">
+        Re-draft this email from a template
+      </label>
+      <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <select
+          id="draft-template"
+          value={templateId}
+          onChange={(e) => setTemplateId(e.target.value)}
+          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm sm:flex-1"
+        >
+          <option value="">None — the AI writes it</option>
+          {templates.map((t) => (
+            <option key={t.id} value={t.id}>{t.name}</option>
+          ))}
+        </select>
+        <button
+          type="button"
+          disabled={redraft.isPending || (unchanged && Boolean(templateId))}
+          onClick={() => redraft.mutate({ prospectId: prospect.id, template_id: templateId || null, template_mode: mode })}
+          className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+        >
+          {redraft.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+          {redraft.isPending ? 'Re-drafting…' : 'Re-draft'}
+        </button>
+      </div>
+      {templateId && (
+        <fieldset className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-700">
+          <legend className="sr-only">How to use the template</legend>
+          <label className="inline-flex items-center gap-1.5">
+            <input type="radio" name="draft-template-mode" checked={mode === 'template'} onChange={() => setMode('template')} />
+            Exactly as written
+          </label>
+          <label className="inline-flex items-center gap-1.5">
+            <input type="radio" name="draft-template-mode" checked={mode === 'ai_template'} onChange={() => setMode('ai_template')} />
+            Personalised by AI
+          </label>
+        </fieldset>
+      )}
+      <p className="mt-1.5 text-xs text-gray-500">Only this email changes. A re-drafted email goes back to review.</p>
+    </div>
+  );
+}
+
+// The template a draft came from, merge fields highlighted rather than filled.
+function TemplateView({ template }) {
+  return (
+    <div data-testid="template-view">
+      <p className="text-xs font-medium uppercase tracking-wider text-gray-400">Template subject</p>
+      <p className="mt-1 text-sm font-medium text-gray-900" data-testid="template-subject">
+        <MergeFieldText text={template.subject || '(no subject)'} />
+      </p>
+      <p className="mt-4 text-xs font-medium uppercase tracking-wider text-gray-400">Template body</p>
+      <SafeHtml
+        html={highlightMergeFields(prepareEmailHtml(template.body))}
+        className={`${EMAIL_BODY_CLASSES} mt-1 rounded-lg border border-amber-100 bg-amber-50/30 p-4`}
+        data-testid="template-body"
+      />
+      <MergeFieldList subject={template.subject} body={template.body} className="mt-2" />
+    </div>
+  );
+}
+
 // The generated email for one prospect, as it will be (or was) sent. Drafts can
 // be approved or skipped from here without going back to the table.
 export default function EmailPreviewModal({
   prospect, onClose, onApprove, onSkip, busy, attachments = [], campaignId, sender = null,
 }) {
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(null);
   const [opened, setOpened] = useState(null);
-  useEffect(() => setOpened(null), [prospect?.id]);
+  const [view, setView] = useState('draft');
+  const { data: allTemplates = [] } = useEmailTemplates();
+  const templates = Array.isArray(allTemplates) ? allTemplates.filter((t) => !t.is_archived) : [];
+  // The caller keys this on the prospect, so switching prospects starts fresh.
   useEffect(() => {
     if (!prospect) return undefined;
     const onKey = (e) => e.key === 'Escape' && onClose();
@@ -112,6 +192,10 @@ export default function EmailPreviewModal({
   const isDraft = prospect.status === 'draft';
   const canSkip = isDraft || prospect.status === 'queued';
   const hasEmail = Boolean(prospect.subject || prospect.body);
+  const template = prospect.template_id ? templates.find((t) => t.id === prospect.template_id) : null;
+  const templateName = template?.name || prospect.template_name;
+  const showingTemplate = view === 'template' && template;
+  const canRedraft = Boolean(campaignId) && hasEmail && ['draft', 'approved'].includes(prospect.status);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -152,7 +236,27 @@ export default function EmailPreviewModal({
             sentFrom={['sent', 'replied', 'bounced'].includes(prospect.status) ? prospect.sent_from : null}
             className="mb-4 rounded-lg border border-indigo-100 bg-indigo-50/50 px-3 py-2"
           />
-          {hasEmail ? (
+          {hasEmail && (
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <p className="flex items-center gap-1.5 text-xs text-gray-500" data-testid="draft-source">
+                <FileText className="h-3.5 w-3.5 text-indigo-400" />
+                {templateName ? <>Drafted from <b className="font-medium text-gray-700">“{templateName}”</b></> : 'Written by the AI — no template'}
+              </p>
+              {template && (
+                <div className="inline-flex rounded-lg bg-gray-100 p-0.5 text-xs" role="group" aria-label="Show draft or template">
+                  {[['draft', 'Draft'], ['template', 'Template']].map(([key, label]) => (
+                    <button key={key} type="button" aria-pressed={view === key} onClick={() => setView(key)}
+                      className={`rounded-md px-2.5 py-1 font-medium ${view === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {hasEmail && showingTemplate ? (
+            <TemplateView template={template} />
+          ) : hasEmail ? (
             <>
               <p className="text-xs font-medium uppercase tracking-wider text-gray-400">Subject</p>
               <p className="mt-1 text-sm font-medium text-gray-900" data-testid="preview-subject">
@@ -190,8 +294,17 @@ export default function EmailPreviewModal({
                   {opened && campaignId && <AttachmentViewer campaignId={campaignId} name={opened} />}
                 </div>
               )}
-              {campaignId && (saving ? (
-                <SaveTemplateForm campaignId={campaignId} prospect={prospect} onSaved={() => setSaving(false)} />
+              {canRedraft && templates.length > 0 && (
+                <DraftTemplateSwitcher key={`${prospect.id}:${prospect.template_id || ''}`} campaignId={campaignId} prospect={prospect} templates={templates} />
+              )}
+              {saved && (
+                <p className="mt-4 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800" data-testid="template-saved">
+                  Saved as “{saved.name}”.{' '}
+                  <Link to="/outreach?tab=templates" className="font-medium underline">Open in Outreach → Templates</Link>
+                </p>
+              )}
+              {campaignId && !saved && (saving ? (
+                <SaveTemplateForm campaignId={campaignId} prospect={prospect} onSaved={(t) => { setSaving(false); setSaved(t || null); }} />
               ) : (
                 <button type="button" onClick={() => setSaving(true)}
                   className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-indigo-600 hover:underline">

@@ -1,6 +1,7 @@
 import { Star, Eye, Pencil, Copy, Trash2, Clock, BarChart3 } from 'lucide-react';
 import { useSetDefaultTemplate, useDeleteTemplate } from '../../hooks/useEmailTemplates';
 import { cn, timeAgo } from '../../lib/utils';
+import { MergeFieldList, MergeFieldText } from '../MergeFieldText';
 
 function getCategoryBadge(name) {
   const lower = (name || '').toLowerCase();
@@ -31,7 +32,10 @@ export default function TemplateCard({ template, onEdit, onPreview, onDuplicate 
               {category.label}
             </span>
           </div>
-          <p className="mt-1 truncate text-sm text-gray-500">{template.subject}</p>
+          <p className="mt-1 truncate text-sm text-gray-500" data-testid="template-card-subject">
+            <MergeFieldText text={template.subject} />
+          </p>
+          <MergeFieldList subject={template.subject} body={template.body} className="mt-1.5" />
           <div className="mt-1.5 flex items-center gap-3 text-xs text-gray-400">
             <span className="inline-flex items-center gap-1">
               <Clock className="h-3 w-3" />
