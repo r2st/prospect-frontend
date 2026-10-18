@@ -212,6 +212,7 @@ describe('CampaignDashboard', () => {
   it.each([
     ['dispatched', 'Email approved — sending now'],
     [undefined, 'Email approved — it will go out within 15 minutes'],
+    ['limit_reached', "Email approved — today's warm-up limit is reached, so it goes out tomorrow"],
   ])('says what approval did with the email (instant_send=%s)', async (instantSend, message) => {
     api.approve.mockResolvedValue({ status: 'approved', instant_send: instantSend });
     renderPage();

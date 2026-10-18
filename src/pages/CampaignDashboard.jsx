@@ -488,7 +488,7 @@ export default function CampaignDashboard() {
               </span>
             )}
             <span>
-              Up to {campaign.settings.daily_limit}/day · sends on approval
+              Up to {campaign.settings.daily_limit}/day after warm-up · sends on approval
             </span>
             {campaign.created_at && <span>Created {formatDate(campaign.created_at)}</span>}
           </p>
