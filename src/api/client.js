@@ -167,6 +167,9 @@ export const contactsApi = {
   quickAdd: (data) => api.post('/contacts/quick-add', data).then(r => r.data),
   // Find existing contacts that look like the one about to be saved (email / phone / name).
   checkDuplicate: (params) => api.get('/contacts/check-duplicate', { params }).then(r => r.data),
+  // Counts by Hunter verdict, source, industry and campaign — the contact
+  // database grouped by category.
+  facets: () => api.get('/contacts/facets').then(r => r.data),
 
   // --- Tags ---
   // Every tag in use with its contact count: { tags: [{ tag, count }] }.
@@ -290,6 +293,13 @@ export const campaignsApi = {
   prospects: (id, params) => api.get(`/campaigns/${id}/prospects`, { params }).then(r => r.data),
   approve: (id, pid) => api.post(`/campaigns/${id}/prospects/${pid}/approve`).then(r => r.data),
   skip: (id, pid) => api.post(`/campaigns/${id}/prospects/${pid}/skip`).then(r => r.data),
+  // Connected Gmail + SMTP mailboxes a campaign can send from.
+  senders: () => api.get('/campaigns/senders').then(r => r.data),
+  // Contacts from the database: { contact_ids } → { queued, skipped: [{ email, reason, label }] }.
+  addContacts: (id, contactIds) =>
+    api.post(`/campaigns/${id}/prospects/add`, { contact_ids: contactIds }).then(r => r.data),
+  // One person typed in: { company_name, domain?, first_name, last_name?, title?, email? }.
+  addManual: (id, data) => api.post(`/campaigns/${id}/prospects/manual`, data).then(r => r.data),
 };
 
 export const aiApi = {

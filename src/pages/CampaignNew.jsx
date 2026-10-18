@@ -21,7 +21,13 @@ import {
   useUploadDocuments,
   errMsg,
 } from '../hooks/useDiscoveryDocuments';
-import { useCampaign, useCampaignActions, useCreateCampaign, useUpdateCampaign } from '../hooks/useCampaigns';
+import {
+  useCampaign,
+  useCampaignActions,
+  useCampaignSenders,
+  useCreateCampaign,
+  useUpdateCampaign,
+} from '../hooks/useCampaigns';
 import { isIcpEmpty, normalizeIcp } from '../lib/campaigns';
 import { cn, formatDate } from '../lib/utils';
 import ErrorBoundary from '../components/ErrorBoundary';
@@ -174,11 +180,42 @@ function DocumentCard({ doc, selected, onToggle, locked }) {
   );
 }
 
+// The connected Gmail / SMTP mailboxes a campaign can send from. Empty value =
+// "your own first mailbox", which is what the server picks when none is sent.
+export function SenderSelect({ id = 'campaign-sender', value, onChange }) {
+  const { data: senders = [], isLoading } = useCampaignSenders();
+  if (isLoading) return <div className="h-9 max-w-md animate-pulse rounded-lg bg-gray-100" />;
+  if (!senders.length) {
+    return (
+      <p className="text-sm text-amber-700">
+        No sending account is connected. Connect Gmail or add an SMTP account in Settings first.
+      </p>
+    );
+  }
+  const current = value || senders[0].id;
+  return (
+    <select
+      id={id}
+      value={current}
+      onChange={(e) => onChange(e.target.value)}
+      className="mt-1 w-full max-w-md rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+    >
+      {senders.map((a) => (
+        <option key={a.id} value={a.id}>
+          {a.email} · {a.kind === 'smtp' ? 'SMTP' : 'Gmail'}{a.mine ? '' : ' (teammate)'}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 function DocumentsStep({ initialSelected, campaign, onCreated }) {
   const { data: docs = [], isLoading } = useDiscoveryDocuments();
   const locked = Boolean(campaign);
   const [selected, setSelected] = useState(() => new Set(campaign ? campaign.document_ids : initialSelected));
   const [name, setName] = useState(campaign?.name || '');
+  const [sender, setSender] = useState('');
+  const { data: senders = [] } = useCampaignSenders();
   const [uploadError, setUploadError] = useState(null);
   const inputRef = useRef(null);
   const upload = useUploadDocuments();
@@ -218,8 +255,13 @@ function DocumentsStep({ initialSelected, campaign, onCreated }) {
 
   const next = () => {
     if (locked) return onCreated(campaign.id);
+    const sender_account_id = sender || senders[0]?.id;
     create.mutate(
-      { name: name.trim() || defaultName || 'Untitled campaign', document_ids: [...selected] },
+      {
+        name: name.trim() || defaultName || 'Untitled campaign',
+        document_ids: [...selected],
+        ...(sender_account_id ? { sender_account_id } : {}),
+      },
       { onSuccess: (c) => onCreated(c.id) }
     );
   };
@@ -311,6 +353,10 @@ function DocumentsStep({ initialSelected, campaign, onCreated }) {
             placeholder={defaultName || 'e.g. Q4 manufacturing push'}
             className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           />
+          <label htmlFor="campaign-sender" className="mt-4 block text-sm font-medium text-gray-700">
+            Send from
+          </label>
+          <SenderSelect value={sender} onChange={setSender} />
         </div>
       )}
 
@@ -405,7 +451,10 @@ function IcpStep({ campaign, onBack, onNext }) {
         onBack={onBack}
         onNext={() =>
           update.mutate(
-            { icp: { ...icp, value_props: icp.value_props.map((v) => v.trim()).filter(Boolean) } },
+            {
+              icp: { ...icp, value_props: icp.value_props.map((v) => v.trim()).filter(Boolean) },
+              baseIcp: campaign.icp_json,
+            },
             { onSuccess: onNext }
           )
         }
@@ -509,6 +558,11 @@ function SettingsStep({ campaign, onBack, onNext }) {
         </div>
         {windowInvalid && <p className="mt-1 text-xs text-red-600">The window has to end after it starts.</p>}
       </fieldset>
+
+      <div>
+        <label htmlFor="settings-sender" className="text-sm font-medium text-gray-700">Send from</label>
+        <SenderSelect id="settings-sender" value={s.sender_account_id} onChange={set('sender_account_id')} />
+      </div>
 
       <div className="space-y-2">
         <Toggle

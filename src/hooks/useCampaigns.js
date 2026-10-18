@@ -2,7 +2,14 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { campaignsApi, queryClient } from '../api/client';
 import { errMsg } from './useDiscoveryDocuments';
-import { normalizeCampaign, normalizeCampaignList, normalizeProspectPage, toApiStatus } from '../lib/campaigns';
+import {
+  DEFAULT_SETTINGS,
+  normalizeCampaign,
+  normalizeCampaignList,
+  normalizeProspectPage,
+  toApiStatus,
+  toCampaignPatch,
+} from '../lib/campaigns';
 
 // A 404 on the collection means this API server doesn't have campaigns yet.
 export const isNotAvailable = (error) => error?.response?.status === 404;
@@ -57,9 +64,13 @@ export function useCampaignProspects(id, { page = 1, pageSize = 25, status } = {
   });
 }
 
+// Creation carries the wizard's defaults (review before send on, a modest daily
+// limit): the campaign is live — and runs its first search — the moment it is
+// created, before the Sending step is ever reached.
 export function useCreateCampaign() {
   return useMutation({
-    mutationFn: (data) => campaignsApi.create(data),
+    mutationFn: ({ settings, ...data }) =>
+      campaignsApi.create(toCampaignPatch({ settings: { ...DEFAULT_SETTINGS, ...(settings || {}) }, ...data })),
     onSuccess: (campaign) => {
       queryClient.invalidateQueries({ queryKey: ['campaigns', 'list'] });
       if (campaign?.id) queryClient.setQueryData(['campaigns', 'detail', campaign.id], campaign);
@@ -75,7 +86,7 @@ export function useCreateCampaign() {
 // useCampaignActions so each gets its own message.
 export function useUpdateCampaign(id) {
   return useMutation({
-    mutationFn: (data) => campaignsApi.update(id, data),
+    mutationFn: (data) => campaignsApi.update(id, toCampaignPatch(data)),
     onSuccess: (campaign) => {
       if (campaign?.id) queryClient.setQueryData(['campaigns', 'detail', id], campaign);
       invalidateCampaign(id);
@@ -172,4 +183,57 @@ export function useDeleteCampaign() {
     remove: (id, opts) => remove.mutate(id, opts),
     deletingId: remove.isPending ? remove.variables : null,
   };
+}
+
+// Connected Gmail + SMTP mailboxes a campaign can send from (yours first).
+export function useCampaignSenders() {
+  return useQuery({
+    queryKey: ['campaigns', 'senders'],
+    queryFn: campaignsApi.senders,
+    staleTime: 60000,
+  });
+}
+
+// "2 added · 1 skipped (Already a prospect in a campaign)" — so an add that did
+// nothing always says why.
+export function addResultMessage(result) {
+  const queued = result?.queued ?? 0;
+  const skipped = result?.skipped ?? [];
+  const parts = [`${queued} added`];
+  if (skipped.length) {
+    const reasons = [...new Set(skipped.map((s) => s.label))].join('; ');
+    parts.push(`${skipped.length} skipped (${reasons})`);
+  }
+  const tail = queued ? ' — verifying with Hunter before anything is sent' : '';
+  return parts.join(' · ') + tail;
+}
+
+function toastAddResult(result) {
+  const msg = addResultMessage(result);
+  if (result?.queued) toast.success(msg);
+  else toast.error(msg);
+}
+
+export function useAddContactsToCampaign() {
+  return useMutation({
+    mutationFn: ({ campaignId, contactIds }) => campaignsApi.addContacts(campaignId, contactIds),
+    onSuccess: (result, { campaignId }) => {
+      invalidateCampaign(campaignId);
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      toastAddResult(result);
+    },
+    onError: (e) => toast.error(errMsg(e, 'Could not add those contacts')),
+  });
+}
+
+export function useAddManualProspect(id) {
+  return useMutation({
+    mutationFn: (data) => campaignsApi.addManual(id, data),
+    onSuccess: (result) => {
+      invalidateCampaign(id);
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      toastAddResult(result);
+    },
+    onError: (e) => toast.error(errMsg(e, 'Could not add that contact')),
+  });
 }

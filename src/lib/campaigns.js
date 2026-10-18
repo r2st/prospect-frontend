@@ -71,15 +71,68 @@ const num = (v) => {
 // "09:00:00" → "09:00" so <input type="time"> accepts it.
 const hhmm = (v, fallback) => (typeof v === 'string' && /^\d{2}:\d{2}/.test(v) ? v.slice(0, 5) : fallback);
 
+// The API keeps company size as { min, max }; the wizard edits it as text.
+export function sizeFromApi(size) {
+  if (size == null) return '';
+  if (typeof size !== 'object') return String(size);
+  const { min, max } = size;
+  if (min && max) return `${min}-${max}`;
+  if (min) return `${min}+`;
+  if (max) return `1-${max}`;
+  return '';
+}
+
+// "51-200" → {min: 51, max: 200}; "500+" → {min: 500}; "200" → {max: 200}.
+export function sizeToApi(text) {
+  const nums = (String(text || '').match(/\d[\d,]*/g) || []).map((n) => Number(n.replace(/,/g, '')));
+  if (!nums.length) return { min: null, max: null };
+  if (/\+/.test(text)) return { min: nums[0], max: null };
+  if (nums.length === 1) return { min: null, max: nums[0] };
+  return { min: Math.min(nums[0], nums[1]), max: Math.max(nums[0], nums[1]) };
+}
+
 export function normalizeIcp(raw) {
   if (!raw || typeof raw !== 'object') return { ...EMPTY_ICP };
   return {
     industries: asList(raw.industries ?? raw.target_industries ?? raw.industry),
-    company_size: String(raw.company_size ?? raw.company_size_range ?? raw.employee_range ?? ''),
-    geographies: asList(raw.geographies ?? raw.geography ?? raw.locations),
-    titles: asList(raw.titles ?? raw.decision_maker_titles ?? raw.job_titles),
+    company_size: sizeFromApi(raw.company_size ?? raw.company_size_range ?? raw.employee_range),
+    geographies: asList(raw.geographies ?? raw.target_locations ?? raw.geography ?? raw.locations),
+    titles: asList(raw.titles ?? raw.buyer_titles ?? raw.decision_maker_titles ?? raw.job_titles),
     value_props: asList(raw.value_props ?? raw.value_propositions),
   };
+}
+
+/**
+ * The wizard's { settings, icp } in the field names PATCH /campaigns accepts.
+ *
+ * The API has no `settings` or `icp` key, and it ignores unknown fields — so
+ * sending them as-is (as the wizard did) saved nothing: every campaign kept
+ * the server's defaults whatever was chosen, review-before-send included.
+ * `baseIcp` is the campaign's current icp_json, so the fields the wizard
+ * doesn't edit (summary, keywords, search query) survive the save.
+ */
+export function toCampaignPatch(data = {}) {
+  const { settings, icp, baseIcp, ...rest } = data;
+  const out = { ...rest };
+  if (settings) {
+    out.daily_send_limit = settings.daily_limit;
+    out.send_window_start = settings.send_window_start;
+    out.send_window_end = settings.send_window_end;
+    out.send_on_weekends = settings.send_on_weekends;
+    out.review_before_send = settings.review_before_send;
+    if (settings.sender_account_id) out.sender_account_id = settings.sender_account_id;
+  }
+  if (icp) {
+    out.icp_json = {
+      ...(baseIcp || {}),
+      target_industries: icp.industries,
+      target_locations: icp.geographies,
+      buyer_titles: icp.titles,
+      value_props: icp.value_props,
+      company_size: sizeToApi(icp.company_size),
+    };
+  }
+  return out;
 }
 
 export function isIcpEmpty(icp) {
@@ -95,6 +148,8 @@ export function normalizeSettings(raw) {
     send_window_end: hhmm(s.send_window_end, DEFAULT_SETTINGS.send_window_end),
     send_on_weekends: Boolean(s.send_on_weekends ?? DEFAULT_SETTINGS.send_on_weekends),
     review_before_send: Boolean(s.review_before_send ?? DEFAULT_SETTINGS.review_before_send),
+    // Gmail or SMTP; whichever column the campaign holds.
+    sender_account_id: s.sender_account_id || s.gmail_account_id || s.smtp_account_id || '',
   };
 }
 
@@ -115,7 +170,7 @@ export function normalizeCampaign(raw) {
     status: raw.status || 'draft',
     documents,
     document_ids: raw.document_ids || documents.map((d) => d.id),
-    icp: normalizeIcp(raw.icp),
+    icp: normalizeIcp(raw.icp ?? raw.icp_json),
     settings: normalizeSettings({ ...raw, ...(raw.settings || {}) }),
     metrics: {
       total_prospects: num(m.total_prospects ?? m.prospects_found ?? raw.prospects_found ?? raw.total_prospects),

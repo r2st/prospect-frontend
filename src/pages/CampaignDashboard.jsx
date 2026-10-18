@@ -17,6 +17,7 @@ import {
   SkipForward,
   Square,
   Trash2,
+  UserPlus,
   Users,
 } from 'lucide-react';
 import { useCampaign, useCampaignActions, useCampaignProspects, isNotAvailable } from '../hooks/useCampaigns';
@@ -29,6 +30,7 @@ import ErrorBoundary from '../components/ErrorBoundary';
 import MetricCard from '../components/MetricCard';
 import Skeleton from '../components/Skeleton';
 import EmailPreviewModal from '../components/campaigns/EmailPreviewModal';
+import AddContactModal from '../components/campaigns/AddContactModal';
 import { CampaignStatusBadge, ProspectStatusBadge } from '../components/campaigns/StatusBadge';
 
 const PAGE_SIZE = 25;
@@ -333,6 +335,7 @@ export default function CampaignDashboard() {
   const { data: campaign, isLoading, error, refetch } = useCampaign(id);
   const actions = useCampaignActions(id);
   const [confirm, setConfirm] = useState(null); // 'stop' | 'delete'
+  const [adding, setAdding] = useState(false);
 
   if (isLoading) return <DashboardSkeleton />;
 
@@ -405,6 +408,16 @@ export default function CampaignDashboard() {
             >
               <Play className="h-4 w-4" />
               Finish setup
+            </button>
+          )}
+          {status !== 'stopped' && (
+            <button
+              type="button"
+              onClick={() => setAdding(true)}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+            >
+              <UserPlus className="h-4 w-4" />
+              Add contact
             </button>
           )}
           {canPause(status) && (
@@ -528,6 +541,8 @@ export default function CampaignDashboard() {
       <ErrorBoundary resetKey={`${id}:prospects`} fallback={({ reset }) => <SectionFallback reset={reset} />}>
         <ProspectTable campaignId={id} actions={actions} />
       </ErrorBoundary>
+
+      {adding && <AddContactModal campaignId={id} onClose={() => setAdding(false)} />}
 
       <ConfirmDialog
         open={confirm === 'stop'}

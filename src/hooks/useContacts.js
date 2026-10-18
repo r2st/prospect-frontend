@@ -22,11 +22,12 @@ export function useContacts(params = {}) {
     page = 1, pageSize = 50, search = '', sortBy = 'created_at', sortDir = 'desc',
     status, source, city, companyName, group,
     tags, tagMatch = 'all', suppressed, hasBounced,
+    verification, industry, campaignId,
   } = params;
   return useQuery({
     queryKey: ['contacts', 'all', {
       page, pageSize, search, sortBy, sortDir, status, source, city, companyName,
-      group, tags, tagMatch, suppressed, hasBounced,
+      group, tags, tagMatch, suppressed, hasBounced, verification, industry, campaignId,
     }],
     staleTime: 60000,
     queryFn: async () => {
@@ -54,6 +55,10 @@ export function useContacts(params = {}) {
       }
       if (suppressed !== undefined && suppressed !== null) apiParams.suppressed = suppressed;
       if (hasBounced !== undefined && hasBounced !== null) apiParams.has_bounced = hasBounced;
+      // Hunter verdict / industry / source campaign: all server-side, like tags.
+      if (verification) apiParams.verification = verification;
+      if (industry) apiParams.industry = industry;
+      if (campaignId) apiParams.campaign_id = campaignId;
 
       const [contactsRaw, companiesRaw] = await Promise.all([
         contactsApi.getAll(apiParams),
@@ -260,5 +265,15 @@ export function useContactEngagement(contactId, limit = 50) {
       }
     },
     retry: false,
+  });
+}
+
+// The contact database grouped by category (Hunter verdict, source, industry,
+// campaign), with counts.
+export function useContactFacets() {
+  return useQuery({
+    queryKey: ['contacts', 'facets'],
+    queryFn: contactsApi.facets,
+    staleTime: 60000,
   });
 }

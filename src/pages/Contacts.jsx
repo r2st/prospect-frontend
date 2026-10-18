@@ -29,6 +29,7 @@ import {
   ChevronDown,
   Tag,
   Ban,
+  Megaphone,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import EmptyState from '../components/EmptyState';
@@ -37,12 +38,14 @@ import ContactDetailModal from '../components/ContactDetailModal';
 import {
   useBulkSuppress,
   useBulkTag,
+  useContactFacets,
   useContactTags,
   useContacts,
   useDeleteContact,
   useQuickAddContact,
 } from '../hooks/useContacts';
 import { contactsApi, queryClient } from '../api/client';
+import { useAddContactsToCampaign, useCampaigns } from '../hooks/useCampaigns';
 import { getInitials, cn, formatDate, timeAgo, contactPhones } from '../lib/utils';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -340,8 +343,117 @@ function QuickAddForm({ onClose }) {
   );
 }
 
+// ─── Hunter verification ──────────────────────────────────────────────────────
+// Only "deliverable" is ever sent by a campaign; the rest explain why not.
+const VERIFICATION_BADGES = {
+  deliverable: { label: 'Deliverable', className: 'bg-green-50 text-green-700' },
+  risky: { label: 'Risky', className: 'bg-amber-50 text-amber-700' },
+  undeliverable: { label: 'Undeliverable', className: 'bg-red-50 text-red-700' },
+  unknown: { label: 'Unknown', className: 'bg-gray-100 text-gray-600' },
+};
+
+export function VerificationBadge({ result }) {
+  const badge = VERIFICATION_BADGES[result];
+  if (!badge) return null;
+  return (
+    <span
+      className={cn('ml-1.5 inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-medium', badge.className)}
+      title="Hunter email verification"
+    >
+      {badge.label}
+    </span>
+  );
+}
+
+// ─── Categories (the contact database grouped, with counts) ───────────────────
+export function CategoryChips({ facets, filters, setFilters }) {
+  if (!facets?.verification?.length) return null;
+  const chip = (active) => cn(
+    'inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+    active ? 'border-blue-300 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50',
+  );
+  return (
+    <div className="flex flex-wrap items-center gap-2" aria-label="Contact categories">
+      <span className="text-xs font-medium text-gray-500">Email verification:</span>
+      <button type="button" className={chip(!filters.verification)} onClick={() => setFilters((p) => ({ ...p, verification: '' }))}>
+        All <span className="text-gray-400">{facets.total}</span>
+      </button>
+      {facets.verification.map((v) => (
+        <button
+          key={v.value}
+          type="button"
+          className={chip(filters.verification === v.value)}
+          onClick={() => setFilters((p) => ({ ...p, verification: p.verification === v.value ? '' : v.value }))}
+        >
+          {v.label} <span className="text-gray-400">{v.count}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ─── Add to campaign ──────────────────────────────────────────────────────────
+export function AddToCampaignModal({ contactIds, onClose, onDone }) {
+  const { data: campaigns = [], isLoading } = useCampaigns();
+  const open = campaigns.filter((c) => c.status === 'active' || c.status === 'paused');
+  const [campaignId, setCampaignId] = useState('');
+  const add = useAddContactsToCampaign();
+  const chosen = campaignId || open[0]?.id || '';
+
+  const submit = async () => {
+    if (!chosen) return;
+    await add.mutateAsync({ campaignId: chosen, contactIds });
+    onDone?.();
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" role="dialog" aria-modal="true" aria-label="Add to campaign">
+      <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl">
+        <h3 className="text-base font-semibold text-gray-900">
+          Add {contactIds.length} contact{contactIds.length === 1 ? '' : 's'} to a campaign
+        </h3>
+        <p className="mt-1 text-sm text-gray-600">
+          Each address is verified with Hunter first; only deliverable ones are ever sent. Anyone already in a campaign, unsubscribed or on your own domain is skipped, and you&apos;ll see why.
+        </p>
+        {isLoading ? (
+          <div className="mt-4 h-9 animate-pulse rounded bg-gray-100" />
+        ) : open.length === 0 ? (
+          <p className="mt-4 text-sm text-gray-500">No active campaigns yet — create one first.</p>
+        ) : (
+          <label className="mt-4 block text-xs font-medium text-gray-500">
+            Campaign
+            <select
+              value={chosen}
+              onChange={(e) => setCampaignId(e.target.value)}
+              className="mt-1 h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700"
+            >
+              {open.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}{c.status === 'paused' ? ' (paused)' : ''}</option>
+              ))}
+            </select>
+          </label>
+        )}
+        <div className="mt-5 flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={!chosen || add.isPending}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {add.isPending ? 'Adding…' : 'Add to campaign'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Bulk Action Bar ──────────────────────────────────────────────────────────
-function BulkActionBar({ selectedIds, items, onDeselect, onDelete, onExport, onTag, onSuppress }) {
+function BulkActionBar({ selectedIds, items, onDeselect, onDelete, onExport, onTag, onSuppress, onAddToCampaign }) {
   if (selectedIds.length === 0) return null;
 
   return (
@@ -360,6 +472,15 @@ function BulkActionBar({ selectedIds, items, onDeselect, onDelete, onExport, onT
         >
           <Download className="h-3.5 w-3.5" />
           Export
+        </button>
+
+        <button
+          type="button"
+          onClick={onAddToCampaign}
+          className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-blue-300 bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-100"
+        >
+          <Megaphone className="h-3.5 w-3.5" />
+          Add to campaign
         </button>
 
         <button
@@ -556,11 +677,12 @@ function ActionsDropdown({ contact, onEdit, onDelete }) {
 }
 
 // ─── Advanced Filters Panel ───────────────────────────────────────────────────
-function FilterPanel({ filters, setFilters, onClear, allTags = [], onToggleTag }) {
+function FilterPanel({ filters, setFilters, onClear, allTags = [], onToggleTag, facets }) {
   const hasFilters =
     filters.source !== 'all' || filters.status !== 'all' || filters.city ||
     filters.companyName || filters.tags.length > 0 ||
-    filters.suppressed !== 'all' || filters.bounced !== 'all';
+    filters.suppressed !== 'all' || filters.bounced !== 'all' ||
+    filters.verification || filters.industry || filters.campaignId;
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4">
@@ -657,6 +779,56 @@ function FilterPanel({ filters, setFilters, onClear, allTags = [], onToggleTag }
             <option value="all">Any</option>
             <option value="yes">Has bounced</option>
             <option value="no">Never bounced</option>
+          </select>
+        </div>
+        <div>
+          <label htmlFor="filter-verification" className="mb-1 block text-xs font-medium text-gray-500">
+            Email verification
+          </label>
+          <select
+            id="filter-verification"
+            value={filters.verification}
+            onChange={(e) => setFilters((p) => ({ ...p, verification: e.target.value }))}
+            className="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          >
+            <option value="">Any</option>
+            <option value="deliverable">Deliverable</option>
+            <option value="risky">Risky (catch-all)</option>
+            <option value="undeliverable">Undeliverable</option>
+            <option value="unknown">Unknown</option>
+            <option value="unverified">Not verified</option>
+          </select>
+        </div>
+        <div>
+          <label htmlFor="filter-industry" className="mb-1 block text-xs font-medium text-gray-500">
+            Industry
+          </label>
+          <select
+            id="filter-industry"
+            value={filters.industry}
+            onChange={(e) => setFilters((p) => ({ ...p, industry: e.target.value }))}
+            className="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          >
+            <option value="">Any</option>
+            {(facets?.industry || []).map((f) => (
+              <option key={f.value} value={f.value}>{f.label} ({f.count})</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="filter-campaign" className="mb-1 block text-xs font-medium text-gray-500">
+            Campaign
+          </label>
+          <select
+            id="filter-campaign"
+            value={filters.campaignId}
+            onChange={(e) => setFilters((p) => ({ ...p, campaignId: e.target.value }))}
+            className="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          >
+            <option value="">Any</option>
+            {(facets?.campaign || []).map((f) => (
+              <option key={f.value} value={f.value}>{f.label} ({f.count})</option>
+            ))}
           </select>
         </div>
       </div>
@@ -818,7 +990,12 @@ export default function Contacts() {
     tagMatch: 'all',
     suppressed: 'all',   // 'all' | 'yes' | 'no'
     bounced: 'all',      // 'all' | 'yes' | 'no'
+    // Server-side, from the contact facets.
+    verification: '',    // Hunter verdict, or 'unverified'
+    industry: '',
+    campaignId: '',
   });
+  const [addToCampaign, setAddToCampaign] = useState(false);
 
   // Genuine vs test contact group — quick-access chips above the toolbar.
   const [group, setGroup] = useState('all');
@@ -862,7 +1039,11 @@ export default function Contacts() {
     tagMatch: filters.tagMatch,
     suppressed: filters.suppressed === 'all' ? undefined : filters.suppressed === 'yes',
     hasBounced: filters.bounced === 'all' ? undefined : filters.bounced === 'yes',
+    verification: filters.verification || undefined,
+    industry: filters.industry || undefined,
+    campaignId: filters.campaignId || undefined,
   });
+  const { data: facets } = useContactFacets();
 
   const deleteContact = useDeleteContact();
   const { data: allTags = [] } = useContactTags();
@@ -1048,6 +1229,7 @@ export default function Contacts() {
     setFilters({
       source: 'all', status: 'all', city: '', companyName: '',
       tags: [], tagMatch: 'all', suppressed: 'all', bounced: 'all',
+      verification: '', industry: '', campaignId: '',
     });
   };
 
@@ -1058,6 +1240,9 @@ export default function Contacts() {
     !!filters.companyName.trim(),
     filters.suppressed !== 'all',
     filters.bounced !== 'all',
+    !!filters.verification,
+    !!filters.industry,
+    !!filters.campaignId,
   ].filter(Boolean).length + filters.tags.length;
 
   // ─── Inline edit cell renderer ──────────────────────────────────────────
@@ -1253,8 +1438,11 @@ export default function Contacts() {
           onClear={clearFilters}
           allTags={allTags}
           onToggleTag={toggleTagFilter}
+          facets={facets}
         />
       )}
+
+      <CategoryChips facets={facets} filters={filters} setFilters={setFilters} />
 
       {/* Content */}
       {isLoading ? (
@@ -1357,6 +1545,7 @@ export default function Contacts() {
                             </div>
                             <div className="text-xs text-gray-500">
                               {renderEditableCell(contact, 'email', contact.email)}
+                              <VerificationBadge result={contact.email_verification_result} />
                             </div>
                           </div>
                         </div>
@@ -1477,7 +1666,16 @@ export default function Contacts() {
         onDelete={handleBulkDelete}
         onTag={handleBulkTag}
         onSuppress={handleBulkSuppress}
+        onAddToCampaign={() => setAddToCampaign(true)}
       />
+
+      {addToCampaign && (
+        <AddToCampaignModal
+          contactIds={selectedIds}
+          onClose={() => setAddToCampaign(false)}
+          onDone={() => setSelectedIds([])}
+        />
+      )}
 
       {/* Contact Detail Slide-Over */}
       {detailContact && (

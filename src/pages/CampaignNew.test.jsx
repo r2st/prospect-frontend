@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const docs = { list: vi.fn(), get: vi.fn(), uploadMany: vi.fn() };
-const camp = { get: vi.fn(), create: vi.fn(), update: vi.fn() };
+const camp = { get: vi.fn(), create: vi.fn(), update: vi.fn(), senders: vi.fn() };
 vi.mock('../api/client', () => ({
   queryClient: { invalidateQueries: vi.fn(), setQueryData: vi.fn(), removeQueries: vi.fn() },
   discoveryDocsApi: {
@@ -17,6 +17,7 @@ vi.mock('../api/client', () => ({
     get: (...a) => camp.get(...a),
     create: (...a) => camp.create(...a),
     update: (...a) => camp.update(...a),
+    senders: (...a) => camp.senders(...a),
   },
 }));
 const toastMock = vi.hoisted(() => Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }));
@@ -68,6 +69,44 @@ describe('CampaignNew wizard', () => {
     camp.get.mockResolvedValue(CAMPAIGN);
     camp.create.mockResolvedValue(CAMPAIGN);
     camp.update.mockImplementation((id, body) => Promise.resolve({ ...CAMPAIGN, ...body }));
+    camp.senders.mockResolvedValue([
+      { id: 'g1', kind: 'gmail', email: 'me@ourco.com', mine: true },
+      { id: 's1', kind: 'smtp', email: 'outbound@ourco.com', mine: false },
+    ]);
+  });
+
+  it('lets you pick which mailbox the campaign sends from', async () => {
+    renderAt('/campaigns/new?docs=d1');
+    const select = await screen.findByLabelText('Send from');
+    await waitFor(() => expect(within(select).getAllByRole('option')).toHaveLength(2));
+    expect(within(select).getByRole('option', { name: /outbound@ourco.com · SMTP \(teammate\)/ })).toBeInTheDocument();
+    await userEvent.selectOptions(select, 's1');
+    await userEvent.click(screen.getByRole('button', { name: /Analyze documents/ }));
+    await waitFor(() => expect(camp.create).toHaveBeenCalled());
+    expect(camp.create.mock.calls[0][0].sender_account_id).toBe('s1');
+  });
+
+  it('reads the ICP the server actually returns (icp_json) and keeps what it does not edit', async () => {
+    const serverShaped = {
+      ...CAMPAIGN,
+      icp: undefined,
+      icp_json: {
+        summary: 'Shops that quote by hand', search_query: 'CNC shops', keywords: ['quoting'],
+        target_industries: ['CNC machining'], target_locations: ['Ontario'],
+        buyer_titles: ['COO'], value_props: ['Fast quotes'], company_size: { min: 10, max: 50 },
+      },
+    };
+    camp.get.mockResolvedValue(serverShaped);
+    renderAt('/campaigns/new?id=c1&step=1');
+    expect(await screen.findByDisplayValue('10-50')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /^Next/ }));
+    await waitFor(() => expect(camp.update).toHaveBeenCalled());
+    const body = camp.update.mock.calls[0][1].icp_json;
+    expect(body.target_locations).toEqual(['Ontario']);
+    expect(body.company_size).toEqual({ min: 10, max: 50 });
+    // Fields the wizard doesn't show survive the save.
+    expect(body.search_query).toBe('CNC shops');
+    expect(body.keywords).toEqual(['quoting']);
   });
 
   it('preselects documents passed from Discovery and creates the campaign', async () => {
@@ -78,7 +117,18 @@ describe('CampaignNew wizard', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /Analyze documents/ }));
     await waitFor(() =>
-      expect(camp.create).toHaveBeenCalledWith({ name: 'Outreach — deck', document_ids: ['d1'] })
+      // In the API's own field names, with the wizard's defaults: the campaign
+      // is live the moment it exists, so review-before-send must already be on.
+      expect(camp.create).toHaveBeenCalledWith({
+        name: 'Outreach — deck',
+        document_ids: ['d1'],
+        sender_account_id: 'g1',
+        daily_send_limit: 25,
+        send_window_start: '09:00',
+        send_window_end: '17:00',
+        send_on_weekends: false,
+        review_before_send: true,
+      })
     );
     // On to the ICP step for the new campaign.
     expect(await screen.findByText('Your ideal customer')).toBeInTheDocument();
@@ -125,12 +175,13 @@ describe('CampaignNew wizard', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Remove Germany from Geography' }));
     await userEvent.click(screen.getByRole('button', { name: /^Next/ }));
     await waitFor(() => expect(camp.update).toHaveBeenCalled());
+    // icp_json in the API's shape — an `icp` key is ignored by the server.
     expect(camp.update).toHaveBeenCalledWith('c1', {
-      icp: {
-        industries: ['CNC machining'],
-        company_size: '51-200',
-        geographies: [],
-        titles: ['Plant Manager', 'COO'],
+      icp_json: {
+        target_industries: ['CNC machining'],
+        company_size: { min: 51, max: 200 },
+        target_locations: [],
+        buyer_titles: ['Plant Manager', 'COO'],
         value_props: ['Quotes in minutes'],
       },
     });
@@ -154,14 +205,14 @@ describe('CampaignNew wizard', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /^Next/ }));
     await waitFor(() =>
+      // Flat API fields — a `settings` key is ignored by the server, which is
+      // how every choice made on this step used to be silently dropped.
       expect(camp.update).toHaveBeenCalledWith('c1', {
-        settings: {
-          daily_limit: 60,
-          send_window_start: '09:00',
-          send_window_end: '18:00',
-          send_on_weekends: true,
-          review_before_send: false,
-        },
+        daily_send_limit: 60,
+        send_window_start: '09:00',
+        send_window_end: '18:00',
+        send_on_weekends: true,
+        review_before_send: false,
       })
     );
   });
