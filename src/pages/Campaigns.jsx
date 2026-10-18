@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { AlertTriangle, FileText, Plus, Rocket } from 'lucide-react';
-import { useCampaigns, isNotAvailable } from '../hooks/useCampaigns';
+import { AlertTriangle, FileText, Plus, Rocket, Trash2 } from 'lucide-react';
+import { useCampaigns, useDeleteCampaign, isNotAvailable } from '../hooks/useCampaigns';
 import { errMsg } from '../hooks/useDiscoveryDocuments';
 import { formatDate, formatNumber } from '../lib/utils';
+import ConfirmDialog from '../components/ConfirmDialog';
 import EmptyState from '../components/EmptyState';
 import Skeleton from '../components/Skeleton';
 import { CampaignStatusBadge } from '../components/campaigns/StatusBadge';
@@ -30,11 +32,33 @@ function docLabel(c) {
   return first ? `${first} +${n - 1}` : `${n} documents`;
 }
 
+function DeleteButton({ campaign, busy, onClick }) {
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={(e) => {
+        // Rows and cards navigate on click; deleting must not open the campaign.
+        e.preventDefault();
+        e.stopPropagation();
+        onClick(campaign);
+      }}
+      aria-label={`Delete ${campaign.name}`}
+      title="Delete campaign"
+      className="rounded-md p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+    >
+      <Trash2 className="h-4 w-4" />
+    </button>
+  );
+}
+
 export default function Campaigns() {
   const navigate = useNavigate();
   const { data: campaigns = [], isLoading, error, refetch } = useCampaigns();
   const open = (id) => navigate(`/campaigns/${id}`);
   const newCampaign = () => navigate('/campaigns/new');
+  const { remove, deletingId } = useDeleteCampaign();
+  const [confirming, setConfirming] = useState(null);
 
   return (
     <div className="space-y-6">
@@ -104,7 +128,10 @@ export default function Campaigns() {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <p className="font-medium text-gray-900">{c.name}</p>
-                    <CampaignStatusBadge status={c.status} />
+                    <div className="flex flex-shrink-0 items-center gap-1">
+                      <CampaignStatusBadge status={c.status} />
+                      <DeleteButton campaign={c} busy={deletingId === c.id} onClick={setConfirming} />
+                    </div>
                   </div>
                   <p className="mt-1 flex items-center gap-1 truncate text-xs text-gray-500">
                     <FileText className="h-3 w-3 flex-shrink-0" />
@@ -138,6 +165,9 @@ export default function Campaigns() {
                       {h}
                     </th>
                   ))}
+                  <th className="px-4 py-3">
+                    <span className="sr-only">Actions</span>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -164,6 +194,9 @@ export default function Campaigns() {
                     <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900">{formatNumber(c.metrics.total_prospects)}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900">{formatNumber(c.metrics.emails_sent)}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{formatDate(c.created_at)}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-right">
+                      <DeleteButton campaign={c} busy={deletingId === c.id} onClick={setConfirming} />
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -171,6 +204,19 @@ export default function Campaigns() {
           </div>
         </>
       )}
+
+      <ConfirmDialog
+        open={Boolean(confirming)}
+        title={`Delete “${confirming?.name ?? ''}”?`}
+        message="Autopilot stops searching and sending for this campaign, and drafts not yet sent are discarded. Emails already sent stay on record, so those people are never emailed again by another campaign."
+        confirmLabel="Delete campaign"
+        onCancel={() => setConfirming(null)}
+        onConfirm={() => {
+          const id = confirming.id;
+          setConfirming(null);
+          remove(id);
+        }}
+      />
     </div>
   );
 }

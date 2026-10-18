@@ -142,3 +142,23 @@ export function useCampaignActions(id) {
     pendingProspect: approve.isPending ? approve.variables : skip.isPending ? skip.variables : null,
   };
 }
+
+// Delete from the campaign list, where there is no single campaign id to bind
+// useCampaignActions to. Soft delete on the server: the campaign stops, its
+// unsent prospects are skipped, and sent ones are kept so no address is mailed
+// twice by a later campaign.
+export function useDeleteCampaign() {
+  const remove = useMutation({
+    mutationFn: (id) => campaignsApi.remove(id),
+    onSuccess: (_data, id) => {
+      queryClient.removeQueries({ queryKey: ['campaigns', 'detail', id] });
+      queryClient.invalidateQueries({ queryKey: ['campaigns', 'list'] });
+      toast.success('Campaign deleted');
+    },
+    onError: (e) => toast.error(errMsg(e, 'Could not delete the campaign')),
+  });
+  return {
+    remove: (id, opts) => remove.mutate(id, opts),
+    deletingId: remove.isPending ? remove.variables : null,
+  };
+}

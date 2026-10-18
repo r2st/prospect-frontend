@@ -5,9 +5,10 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const mockList = vi.fn();
+const mockRemove = vi.fn();
 vi.mock('../api/client', () => ({
   queryClient: { invalidateQueries: vi.fn(), setQueryData: vi.fn(), removeQueries: vi.fn() },
-  campaignsApi: { list: (...a) => mockList(...a) },
+  campaignsApi: { list: (...a) => mockList(...a), remove: (...a) => mockRemove(...a) },
   discoveryDocsApi: {},
 }));
 vi.mock('react-hot-toast', () => ({
@@ -43,6 +44,7 @@ const CAMPAIGN = {
 describe('Campaigns list', () => {
   beforeEach(() => {
     mockList.mockReset();
+    mockRemove.mockReset();
   });
 
   it('shows a skeleton while loading', () => {
@@ -95,5 +97,29 @@ describe('Campaigns list', () => {
     mockList.mockResolvedValue([CAMPAIGN]);
     await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(await screen.findByTestId('campaign-row')).toBeInTheDocument();
+  });
+
+  it('deletes a campaign from the list after confirming, without opening it', async () => {
+    mockList.mockResolvedValue([CAMPAIGN]);
+    mockRemove.mockResolvedValue(undefined);
+    renderPage();
+    const [row] = await screen.findAllByTestId('campaign-row');
+    await userEvent.click(within(row).getByRole('button', { name: 'Delete Q4 machining push' }));
+    // Still on the list: the click did not bubble to the row's navigation.
+    expect(screen.queryByText('dashboard')).not.toBeInTheDocument();
+    expect(screen.getByText('Delete “Q4 machining push”?')).toBeInTheDocument();
+    expect(mockRemove).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'Delete campaign' }));
+    expect(mockRemove).toHaveBeenCalledWith('c1');
+  });
+
+  it('does nothing when the delete is cancelled', async () => {
+    mockList.mockResolvedValue([CAMPAIGN]);
+    renderPage();
+    const [row] = await screen.findAllByTestId('campaign-row');
+    await userEvent.click(within(row).getByRole('button', { name: 'Delete Q4 machining push' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByText('Delete “Q4 machining push”?')).not.toBeInTheDocument();
+    expect(mockRemove).not.toHaveBeenCalled();
   });
 });
