@@ -133,14 +133,26 @@ describe('ApiKeysSettings', () => {
       toast.success.mockReset();
     });
 
-    it('shows Gemini, Groq and OpenRouter in fallback order', async () => {
+    it('shows the AI providers in fallback order, then the web search providers', async () => {
       render(<ApiKeysSettings />);
       const inputs = await screen.findAllByLabelText(/API key$/);
       expect(inputs.map((i) => i.getAttribute('aria-label'))).toEqual([
-        'Gemini API key', 'Groq API key', 'OpenRouter API key',
+        'Gemini API key', 'Claude API key', 'Groq API key', 'OpenRouter API key',
+        'Tavily API key', 'Serper API key', 'Brave Search API key',
       ]);
-      expect(screen.getByText('Fallback 1')).toBeInTheDocument();
-      expect(screen.getByText('Fallback 2')).toBeInTheDocument();
+      expect(screen.getByText('Primary')).toBeInTheDocument();
+      expect(screen.getByText('Recommended')).toBeInTheDocument();
+      expect(screen.getByText('Web search')).toBeInTheDocument();
+    });
+
+    it('saves a Tavily key under the tavily provider', async () => {
+      mockSetLlmKey.mockResolvedValue({ provider: 'tavily', key_hint: '****tvly', has_key: true });
+      const user = userEvent.setup();
+      render(<ApiKeysSettings />);
+      await user.type(await screen.findByLabelText('Tavily API key'), 'tvly-abc');
+      await user.click(screen.getAllByRole('button', { name: 'Save' })[4]);
+      await waitFor(() => expect(mockSetLlmKey).toHaveBeenCalledWith('tvly-abc', 'tavily'));
+      expect(toast.success).toHaveBeenCalledWith('Tavily API key saved');
     });
 
     it('saves a Groq key under the groq provider', async () => {
@@ -149,7 +161,7 @@ describe('ApiKeysSettings', () => {
       render(<ApiKeysSettings />);
 
       await user.type(await screen.findByLabelText('Groq API key'), ' gsk_test_wxyz ');
-      await user.click(screen.getAllByRole('button', { name: 'Save' })[1]);
+      await user.click(screen.getAllByRole('button', { name: 'Save' })[2]);
 
       await waitFor(() => expect(mockSetLlmKey).toHaveBeenCalledWith('gsk_test_wxyz', 'groq'));
       expect(await screen.findByText('****wxyz')).toBeInTheDocument();

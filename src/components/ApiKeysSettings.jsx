@@ -30,7 +30,7 @@ function LoadingRows({ rows = 2 }) {
 }
 
 // Fallback order matches the backend (services/org_gemini.py): Gemini first,
-// then Groq, then OpenRouter when the one before is out of quota or failing.
+// then Claude, Groq and OpenRouter when the one before is out of quota or failing.
 const LLM_PROVIDERS = [
   {
     id: 'gemini',
@@ -41,20 +41,57 @@ const LLM_PROVIDERS = [
     getKeyUrl: 'https://aistudio.google.com/apikey',
   },
   {
+    id: 'anthropic',
+    label: 'Claude',
+    badge: 'Optional',
+    help: 'Used when Gemini is unavailable. Needs an Anthropic API key (a Claude.ai subscription does not include API access). Billed per use by Anthropic.',
+    placeholder: 'Enter your Anthropic API key (sk-ant-...)',
+    getKeyUrl: 'https://console.anthropic.com/settings/keys',
+  },
+  {
     id: 'groq',
     label: 'Groq',
-    badge: 'Fallback 1',
-    help: 'Used when Gemini is out of quota or unavailable. Free tier. No web search: company search results come from the model\'s training data.',
+    badge: 'Fallback',
+    help: 'Free tier. Without a web search key below, company search results come from the model\'s training data.',
     placeholder: 'Enter your Groq API key (gsk_...)',
     getKeyUrl: 'https://console.groq.com/keys',
   },
   {
     id: 'openrouter',
     label: 'OpenRouter',
-    badge: 'Fallback 2',
-    help: 'Used when Gemini and Groq both fail. Uses free models. No web search, same as Groq.',
+    badge: 'Fallback',
+    help: 'Used when the providers above fail. Uses free models.',
     placeholder: 'Enter your OpenRouter API key (sk-or-...)',
     getKeyUrl: 'https://openrouter.ai/keys',
+  },
+];
+
+// Web search behind Discovery when Gemini's Google Search grounding is out of
+// quota: the search finds real companies, any AI key above reads the results.
+export const SEARCH_PROVIDERS = [
+  {
+    id: 'tavily',
+    label: 'Tavily',
+    badge: 'Recommended',
+    help: '1,000 free searches a month, no card needed. Built for AI search, returns page content.',
+    placeholder: 'Enter your Tavily API key (tvly-...)',
+    getKeyUrl: 'https://app.tavily.com',
+  },
+  {
+    id: 'serper',
+    label: 'Serper',
+    badge: 'Google results',
+    help: '2,500 free searches when you sign up. Google search results.',
+    placeholder: 'Enter your Serper API key',
+    getKeyUrl: 'https://serper.dev/api-key',
+  },
+  {
+    id: 'brave',
+    label: 'Brave Search',
+    badge: 'Independent index',
+    help: 'Brave\'s own search index, with a monthly free allowance.',
+    placeholder: 'Enter your Brave Search API key',
+    getKeyUrl: 'https://api-dashboard.search.brave.com/app/keys',
   },
 ];
 
@@ -164,8 +201,10 @@ function ProviderKeyRow({ provider, initial }) {
         title={`Remove ${label} API Key`}
         message={
           id === 'gemini'
-            ? 'Discovery will use your Groq or OpenRouter key if one is saved, without live web search.'
-            : `Discovery will no longer fall back to ${label}.`
+            ? 'Discovery will use your other saved keys instead.'
+            : provider.kind === 'search'
+              ? `Discovery will no longer search the web with ${label}.`
+              : `Discovery will no longer fall back to ${label}.`
         }
         confirmLabel="Remove Key"
         variant="danger"
@@ -181,22 +220,29 @@ function LlmKeySection() {
 
   useEffect(() => {
     const empty = Object.fromEntries(
-      LLM_PROVIDERS.map((p) => [p.id, { provider: p.id, key_hint: '', has_key: false }]),
+      [...LLM_PROVIDERS, ...SEARCH_PROVIDERS].map((p) => [p.id, { provider: p.id, key_hint: '', has_key: false }]),
     );
     settingsApi.listLlmKeys()
       .then((rows) => setKeys({ ...empty, ...Object.fromEntries(rows.map((r) => [r.provider, r])) }))
       .catch(() => setKeys(empty));
   }, []);
 
-  if (!keys) return <LoadingRows rows={3} />;
+  if (!keys) return <LoadingRows rows={4} />;
 
   return (
     <div className="space-y-4">
       <p className="text-sm text-gray-600">
-        Discovery tries these in order: if Gemini is out of quota or unavailable, it falls back to Groq, then OpenRouter. Keys are stored encrypted on the server and never shown again; only the last four characters are displayed.
+        Discovery tries these in order: if Gemini is out of quota or unavailable, it falls back to Claude, then Groq, then OpenRouter. Keys are stored encrypted on the server and never shown again; only the last four characters are displayed.
       </p>
       {LLM_PROVIDERS.map((p) => (
         <ProviderKeyRow key={p.id} provider={p} initial={keys[p.id]} />
+      ))}
+      <h4 className="pt-2 text-sm font-semibold text-gray-900">Web search</h4>
+      <p className="text-sm text-gray-600">
+        Lets Discovery find real, current companies when Gemini&apos;s Google Search isn&apos;t available. Without one, company search falls back to the AI&apos;s memory, which tends to suggest the same well-known companies. Only one is needed; they&apos;re tried in this order.
+      </p>
+      {SEARCH_PROVIDERS.map((p) => (
+        <ProviderKeyRow key={p.id} provider={{ ...p, kind: 'search' }} initial={keys[p.id]} />
       ))}
     </div>
   );
