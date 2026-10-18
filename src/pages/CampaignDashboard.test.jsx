@@ -25,6 +25,7 @@ vi.mock('../api/client', () => ({
     discover: (...a) => api.discover(...a),
   },
   discoveryDocsApi: {},
+  emailApi: { getTemplates: async () => [{ id: 't1', name: 'First touch', is_archived: false, is_default: true }] },
 }));
 const toastMock = vi.hoisted(() => Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }));
 vi.mock('react-hot-toast', () => ({ default: toastMock }));
@@ -120,6 +121,15 @@ describe('CampaignDashboard', () => {
     expect(screen.getByText('Bounce Rate').parentElement).toHaveTextContent('4.0%');
     expect(screen.getByTestId('daily-chart')).toBeInTheDocument();
     expect(screen.getByText(/1 draft\(s\) waiting for your review/)).toBeInTheDocument();
+  });
+
+  it('shows the default email template near the top, ahead of the stats', async () => {
+    api.get.mockResolvedValue({ ...CAMPAIGN, template_id: 't1', template_mode: 'ai_template' });
+    renderPage();
+    const panel = await screen.findByRole('region', { name: 'Default email template' });
+    expect(await within(panel).findByText('Drafting from “First touch” — personalised by AI')).toBeInTheDocument();
+    const stats = screen.getByText('Total Prospects');
+    expect(panel.compareDocumentPosition(stats) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('shows an empty chart message before any sends', async () => {

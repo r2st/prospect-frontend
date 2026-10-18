@@ -24,11 +24,11 @@ export default function TemplatePanel({ campaign, draftsPending = 0 }) {
   const changed = choice.template_id !== initial.template_id || choice.template_mode !== initial.template_mode;
 
   return (
-    <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm" aria-label="Email template">
+    <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm" aria-label="Default email template">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
-            <FileText className="h-4 w-4 text-indigo-500" /> Email template
+            <FileText className="h-4 w-4 text-indigo-500" /> Default email template
           </h2>
           <p className="mt-0.5 text-xs text-gray-500" data-testid="template-current">
             {campaign.template_id && current

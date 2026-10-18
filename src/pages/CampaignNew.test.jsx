@@ -85,7 +85,7 @@ describe('CampaignNew wizard', () => {
     renderAt('/campaigns/new?id=c1&step=2');
     expect(await screen.findByText(/Every email carries deck.pdf/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('switch', { name: 'Attach campaign documents' }));
-    const select = screen.getByLabelText('Email template');
+    const select = screen.getByLabelText('Default email template');
     await waitFor(() => expect(within(select).getAllByRole('option')).toHaveLength(2)); // archived hidden
     await userEvent.selectOptions(select, 't1');
     // Choosing a template defaults to AI personalisation; switch to "as written".
@@ -96,6 +96,52 @@ describe('CampaignNew wizard', () => {
     expect(camp.update.mock.calls[0][1]).toMatchObject({
       attach_documents: true, template_id: 't1', template_mode: 'template',
     });
+  });
+
+  it('preselects the org default template when creating, and leaves it to the server', async () => {
+    camp.templates.mockResolvedValue([
+      { id: 't1', name: 'SRE intro', is_archived: false },
+      { id: 't3', name: 'First touch', is_archived: false, is_default: true },
+    ]);
+    renderAt('/campaigns/new?docs=d1');
+    const select = await screen.findByLabelText('Default email template');
+    await waitFor(() => expect(select).toHaveValue('t3'));
+    expect(within(select).getByRole('option', { name: 'First touch (org default)' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /Personalise with AI/ })).toBeChecked();
+    await userEvent.click(screen.getByRole('button', { name: /Analyze documents/ }));
+    await waitFor(() => expect(camp.create).toHaveBeenCalled());
+    // Untouched: the server applies the org default itself.
+    expect(camp.create.mock.calls[0][0]).not.toHaveProperty('template_id');
+  });
+
+  it('sends a template chosen at creation, so the first drafts use it', async () => {
+    renderAt('/campaigns/new?docs=d1');
+    const select = await screen.findByLabelText('Default email template');
+    await waitFor(() => expect(within(select).getAllByRole('option')).toHaveLength(2));
+    await userEvent.selectOptions(select, 't1');
+    await userEvent.click(screen.getByRole('radio', { name: /Use exactly as written/ }));
+    await userEvent.click(screen.getByRole('button', { name: /Analyze documents/ }));
+    await waitFor(() => expect(camp.create).toHaveBeenCalled());
+    expect(camp.create.mock.calls[0][0]).toMatchObject({ template_id: 't1', template_mode: 'template' });
+  });
+
+  it('can opt out of the org default at creation', async () => {
+    camp.templates.mockResolvedValue([{ id: 't3', name: 'First touch', is_archived: false, is_default: true }]);
+    renderAt('/campaigns/new?docs=d1');
+    const select = await screen.findByLabelText('Default email template');
+    await waitFor(() => expect(select).toHaveValue('t3'));
+    await userEvent.selectOptions(select, '');
+    await userEvent.click(screen.getByRole('button', { name: /Analyze documents/ }));
+    await waitFor(() => expect(camp.create).toHaveBeenCalled());
+    expect(camp.create.mock.calls[0][0]).toMatchObject({ template_id: null, template_mode: 'ai' });
+  });
+
+  it('names the default template in the launch summary', async () => {
+    camp.get.mockResolvedValue({ ...CAMPAIGN, template_id: 't1', template_mode: 'template' });
+    renderAt('/campaigns/new?id=c1&step=3');
+    expect(await screen.findByText('SRE intro — exactly as written')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Edit Email template' }));
+    expect(await screen.findByText('Sending settings')).toBeInTheDocument();
   });
 
   it('lets you pick which mailbox the campaign sends from', async () => {

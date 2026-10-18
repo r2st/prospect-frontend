@@ -587,6 +587,8 @@ export default function CampaignDashboard() {
         </div>
       )}
 
+      <TemplatePanel key={`${campaign.template_id || ''}:${campaign.template_mode || ''}`} campaign={campaign} draftsPending={campaign.metrics?.drafts_pending || 0} />
+
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <MetricCard title="Total Prospects" value={formatNumber(metrics.total_prospects)} icon={Users} color="indigo" />
         <MetricCard title="Emails Sent" value={formatNumber(metrics.emails_sent)} icon={Mail} color="blue" />
@@ -643,8 +645,6 @@ export default function CampaignDashboard() {
           />
         </div>
       </div>
-
-      <TemplatePanel key={`${campaign.template_id || ''}:${campaign.template_mode || ''}`} campaign={campaign} draftsPending={campaign.metrics?.drafts_pending || 0} />
 
       <ErrorBoundary resetKey={`${id}:chart`} fallback={({ reset }) => <SectionFallback reset={reset} />}>
         <DailyChart data={campaign.daily} />

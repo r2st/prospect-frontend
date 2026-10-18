@@ -29,6 +29,7 @@ import {
   useUpdateCampaign,
 } from '../hooks/useCampaigns';
 import TemplateChoice from '../components/campaigns/TemplateChoice';
+import { useEmailTemplates } from '../hooks/useEmailTemplates';
 import { isIcpEmpty, normalizeIcp } from '../lib/campaigns';
 import { cn, formatDate } from '../lib/utils';
 import ErrorBoundary from '../components/ErrorBoundary';
@@ -221,6 +222,12 @@ function DocumentsStep({ initialSelected, campaign, onCreated }) {
   const inputRef = useRef(null);
   const upload = useUploadDocuments();
   const create = useCreateCampaign();
+  // null = untouched: the org's default template, which the server also picks.
+  const [templatePick, setTemplatePick] = useState(null);
+  const { data: templates = [] } = useEmailTemplates();
+  const orgDefault = templates.find((t) => t.is_default && !t.is_archived);
+  const template =
+    templatePick ?? (orgDefault ? { template_id: orgDefault.id, template_mode: 'ai_template' } : { template_id: '', template_mode: 'ai' });
 
   const chosen = docs.filter((d) => selected.has(d.id));
   const stillParsing = chosen.some((d) => d.status === 'parsing');
@@ -262,6 +269,8 @@ function DocumentsStep({ initialSelected, campaign, onCreated }) {
         name: name.trim() || defaultName || 'Untitled campaign',
         document_ids: [...selected],
         ...(sender_account_id ? { sender_account_id } : {}),
+        // Sent with the create so the first drafts — written straight away — use it.
+        ...(templatePick ? { settings: templatePick } : {}),
       },
       { onSuccess: (c) => onCreated(c.id) }
     );
@@ -358,6 +367,13 @@ function DocumentsStep({ initialSelected, campaign, onCreated }) {
             Send from
           </label>
           <SenderSelect value={sender} onChange={setSender} />
+          <div className="mt-4">
+            <TemplateChoice
+              templateId={template.template_id}
+              mode={template.template_mode}
+              onChange={(patch) => setTemplatePick({ ...template, ...patch })}
+            />
+          </div>
         </div>
       )}
 
@@ -635,6 +651,8 @@ const joinOr = (list, fallback = 'Any') => (list.length ? list.join(', ') : fall
 function LaunchStep({ campaign, onBack, goTo, onLaunched }) {
   const actions = useCampaignActions(campaign.id);
   const { icp, settings } = campaign;
+  const { data: templates = [] } = useEmailTemplates();
+  const template = settings.template_id ? templates.find((t) => t.id === settings.template_id) : null;
   return (
     <div className="space-y-5">
       <div>
@@ -672,6 +690,13 @@ function LaunchStep({ campaign, onBack, goTo, onLaunched }) {
           Up to {settings.daily_limit} emails/day, {settings.send_window_start}–{settings.send_window_end},{' '}
           {settings.send_on_weekends ? 'every day' : 'weekdays only'}.{' '}
           {settings.review_before_send ? 'You approve each email before it goes out.' : 'Emails send automatically.'}
+        </SummaryRow>
+        <SummaryRow label="Email template" onEdit={() => goTo(2)}>
+          <span data-testid="launch-template">
+            {template
+              ? `${template.name} — ${settings.template_mode === 'template' ? 'exactly as written' : 'personalised by AI'}`
+              : 'None — the AI writes each email'}
+          </span>
         </SummaryRow>
       </dl>
 

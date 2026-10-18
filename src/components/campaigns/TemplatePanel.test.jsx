@@ -12,6 +12,7 @@ vi.mock('../../api/client', () => ({
   emailApi: {
     getTemplates: async () => [
       { id: 't1', name: 'Saved from a draft', is_archived: false },
+      { id: 't3', name: 'First touch', is_archived: false, is_default: true },
       { id: 't2', name: 'Old one', is_archived: true },
     ],
   },
@@ -52,6 +53,22 @@ describe('TemplatePanel', () => {
     await userEvent.selectOptions(screen.getByRole('combobox'), 't1');
     await userEvent.click(screen.getByRole('button', { name: 'Use this for new drafts' }));
     await waitFor(() => expect(update).toHaveBeenCalledWith('c1', { template_id: 't1', template_mode: 'ai_template' }));
+  });
+
+  it('is labelled as the campaign\'s default template and marks the org default', async () => {
+    renderPanel({ id: 'c1', template_id: null, template_mode: 'ai' });
+    expect(screen.getByRole('region', { name: 'Default email template' })).toBeInTheDocument();
+    expect(await screen.findByRole('option', { name: 'First touch (org default)' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Default email template' })).toHaveValue('');
+  });
+
+  it('switches back to AI drafting when the template is cleared', async () => {
+    update.mockResolvedValue({ id: 'c1' });
+    renderPanel({ id: 'c1', template_id: 't1', template_mode: 'template' });
+    await screen.findByRole('option', { name: 'Saved from a draft' });
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Default email template' }), '');
+    await userEvent.click(screen.getByRole('button', { name: 'Use this for new drafts' }));
+    await waitFor(() => expect(update).toHaveBeenCalledWith('c1', { template_id: null, template_mode: 'ai' }));
   });
 
   it('names the current template and offers to rewrite pending drafts', async () => {
