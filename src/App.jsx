@@ -56,6 +56,7 @@ const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
 const ChangePassword = lazy(() => import('./pages/ChangePassword'));
 const AdminUsers = lazy(() => import('./pages/AdminUsers'));
+const AdminFeedback = lazy(() => import('./pages/AdminFeedback'));
 const GdprControls = lazy(() => import('./pages/GdprControls'));
 const OrganizationSettings = lazy(() => import('./pages/OrganizationSettings'));
 const TeamManagement = lazy(() => import('./pages/TeamManagement'));
@@ -189,6 +190,14 @@ export default function App() {
             element={
               <ProtectedRoute requireRole="org_admin">
                 <AdminUsers />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/feedback"
+            element={
+              <ProtectedRoute requireRole="org_admin">
+                <AdminFeedback />
               </ProtectedRoute>
             }
           />

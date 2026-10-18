@@ -1058,3 +1058,8 @@ export const clientSuccessAgentApi = {
   // Clients sorted by current health (lowest first) with trend arrows.
   healthOverview: (params) => api.get('/client-success-agent/health-overview', { params }).then(r => r.data),
 };
+
+export const feedbackApi = {
+  submit: (data) => api.post('/feedback', data).then(r => r.data),
+  list: (params) => api.get('/feedback', { params }).then(r => r.data),
+};

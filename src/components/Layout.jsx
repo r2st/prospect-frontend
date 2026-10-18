@@ -56,6 +56,7 @@ import {
   Sparkle,
   ChevronUp,
   KeyRound,
+  MessageSquare,
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { emailApi } from '../api/client';
@@ -67,6 +68,7 @@ import OrgSwitcher from './OrgSwitcher';
 import ImpersonationBanner from './ImpersonationBanner';
 import Logo, { LogoMark } from './Logo';
 import { DoAideFooter } from './DoAideBrand';
+import FeedbackWidget, { pageNameFromPath } from './FeedbackWidget';
 
 // Sidebar navigation, grouped to match a salesperson's daily flow:
 // plan the day (Workspace) → watch the agent (Dialtone) → build the list
@@ -199,6 +201,7 @@ const allNavItems = [
   { name: 'Usage', href: '/settings/usage', icon: BarChart3 },
   ...platformSection.items,
   { name: 'Settings', href: '/settings', icon: Settings },
+  { name: 'Feedback', href: '/admin/feedback', icon: MessageSquare },
 ];
 
 const NAV_PREFS_KEY = 'landline.nav.collapsedSections';
@@ -511,6 +514,12 @@ export default function Layout({ children }) {
                   onClick={() => setAccountOpen(false)}
                 />
               )}
+              {isAdmin && (
+                <NavLink
+                  item={{ name: 'Feedback', href: '/admin/feedback', icon: MessageSquare }}
+                  onClick={() => setAccountOpen(false)}
+                />
+              )}
               {user && (
                 <>
                   <div className="my-1 border-t border-gray-100" />
@@ -694,6 +703,7 @@ export default function Layout({ children }) {
         <DoAideFooter className="mx-auto max-w-7xl border-t border-gray-200 px-4 py-6 sm:px-6 lg:px-8" />
       </main>
 
+      <FeedbackWidget pageName={currentPage ? currentPage.name : pageNameFromPath(location.pathname)} />
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>
   );
