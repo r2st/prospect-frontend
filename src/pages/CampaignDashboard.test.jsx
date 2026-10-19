@@ -11,6 +11,7 @@ const api = {
   prospects: vi.fn(),
   approve: vi.fn(),
   bulkApprove: vi.fn(),
+  addManual: vi.fn(),
   skip: vi.fn(),
   discover: vi.fn(),
 };
@@ -23,13 +24,14 @@ vi.mock('../api/client', () => ({
     prospects: (...a) => api.prospects(...a),
     approve: (...a) => api.approve(...a),
     bulkApprove: (...a) => api.bulkApprove(...a),
+    addManual: (...a) => api.addManual(...a),
     skip: (...a) => api.skip(...a),
     discover: (...a) => api.discover(...a),
   },
   discoveryDocsApi: {},
   emailApi: { getTemplates: async () => [{ id: 't1', name: 'First touch', is_archived: false, is_default: true }] },
 }));
-const toastMock = vi.hoisted(() => Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }));
+const toastMock = vi.hoisted(() => Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn(), loading: vi.fn(() => 'tid') }));
 vi.mock('react-hot-toast', () => ({ default: toastMock }));
 
 import CampaignDashboard from './CampaignDashboard';
@@ -266,6 +268,27 @@ describe('CampaignDashboard', () => {
     expect(within(screen.getByTestId('bulk-approve-bar')).getByText('1 selected')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('checkbox', { name: 'Select all drafts on this page' }));
     expect(screen.queryByText('1 selected')).not.toBeInTheDocument();
+  });
+
+  it('shows a new contact in the list at once while it is being added', async () => {
+    let finish;
+    api.addManual.mockReturnValue(new Promise((r) => { finish = r; }));
+    renderPage();
+    await screen.findAllByTestId('prospect-row');
+    await userEvent.click(screen.getByRole('button', { name: 'Add contact' }));
+    const dialog = screen.getByRole('dialog', { name: 'Add a contact' });
+    await userEvent.type(within(dialog).getByLabelText('Company name *'), 'Delta Labs');
+    await userEvent.type(within(dialog).getByLabelText('First name *'), 'Dee');
+    await userEvent.type(within(dialog).getByLabelText('Email'), 'dee@delta.io');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Add contact' }));
+
+    expect(screen.queryByRole('dialog', { name: 'Add a contact' })).not.toBeInTheDocument();
+    const [first] = await screen.findAllByTestId('prospect-row');
+    expect(first).toHaveTextContent('Delta Labs');
+    expect(within(first).getByTestId('prospect-adding')).toBeInTheDocument();
+    expect(within(first).queryByRole('checkbox')).not.toBeInTheDocument();
+    finish({ queued: 1, skipped: [] });
+    await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith(expect.stringMatching(/1 added/), { id: 'tid' }));
   });
 
   it('previews the generated email and approves from the modal', async () => {

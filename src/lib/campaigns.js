@@ -39,6 +39,16 @@ export function emailVerification(p) {
   return { key: 'unverified', label: 'Unverified', className: 'bg-amber-50 text-amber-700' };
 }
 
+// The footer every campaign email gets on the way out — mirrors
+// _unsubscribe_footer_text / SENDER_ADDRESS_LINE / POWERED_BY_URL in the
+// backend's app/services/email_dispatch.py; change them together. The real
+// unsubscribe URL is signed per recipient, so the preview shows a stand-in.
+export const UNSUBSCRIBE_FOOTER = {
+  prompt: "Don't want these emails? Reply UNSUBSCRIBE or click:",
+  address: 'DoAide · Bangalore, India',
+  poweredBy: 'Powered by DoAide Prospect — https://prospect.doaide.com',
+};
+
 export const EMAIL_ORIGIN = { hunter_finder: 'Found by Hunter', pattern: 'Guessed from name' };
 
 export const DEFAULT_SETTINGS = {

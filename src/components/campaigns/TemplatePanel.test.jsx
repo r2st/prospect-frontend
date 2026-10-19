@@ -22,16 +22,26 @@ vi.mock('react-hot-toast', () => ({ default: toastMock }));
 
 import TemplatePanel from './TemplatePanel';
 
-function renderPanel(campaign, draftsPending = 0) {
+function renderPanel(campaign, draftsPending = 0, { open = true } = {}) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   render(
     <QueryClientProvider client={qc}>
       <MemoryRouter><TemplatePanel campaign={campaign} draftsPending={draftsPending} /></MemoryRouter>
     </QueryClientProvider>,
   );
+  // The picker starts collapsed to one line; most tests work inside it.
+  if (open) return userEvent.click(screen.getByRole('button', { name: /Change/ }));
+  return undefined;
 }
 
 describe('TemplatePanel', () => {
+  it('starts as one line naming the template, with the picker collapsed', async () => {
+    await renderPanel({ id: 'c1', template_id: 't1', template_mode: 'template' }, 0, { open: false });
+    expect(await screen.findByText('Drafting from “Saved from a draft” — exactly as written')).toBeInTheDocument();
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Change/ })).toHaveAttribute('aria-expanded', 'false');
+  });
+
   beforeEach(() => {
     update.mockReset();
     redraft.mockReset();
@@ -39,7 +49,7 @@ describe('TemplatePanel', () => {
   });
 
   it('offers the same templates as Outreach → Templates, without archived ones', async () => {
-    renderPanel({ id: 'c1', template_id: null, template_mode: 'ai' });
+    await renderPanel({ id: 'c1', template_id: null, template_mode: 'ai' });
     expect(await screen.findByRole('option', { name: 'Saved from a draft' })).toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'Old one' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Manage templates' })).toHaveAttribute('href', '/outreach?tab=templates');
@@ -48,7 +58,7 @@ describe('TemplatePanel', () => {
 
   it('saves a newly chosen template for new drafts', async () => {
     update.mockResolvedValue({ id: 'c1' });
-    renderPanel({ id: 'c1', template_id: null, template_mode: 'ai' });
+    await renderPanel({ id: 'c1', template_id: null, template_mode: 'ai' });
     await screen.findByRole('option', { name: 'Saved from a draft' });
     await userEvent.selectOptions(screen.getByRole('combobox'), 't1');
     await userEvent.click(screen.getByRole('button', { name: 'Use this for new drafts' }));
@@ -56,7 +66,7 @@ describe('TemplatePanel', () => {
   });
 
   it('is labelled as the campaign\'s default template and marks the org default', async () => {
-    renderPanel({ id: 'c1', template_id: null, template_mode: 'ai' });
+    await renderPanel({ id: 'c1', template_id: null, template_mode: 'ai' });
     expect(screen.getByRole('region', { name: 'Default email template' })).toBeInTheDocument();
     expect(await screen.findByRole('option', { name: 'First touch (org default)' })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Default email template' })).toHaveValue('');
@@ -64,7 +74,7 @@ describe('TemplatePanel', () => {
 
   it('switches back to AI drafting when the template is cleared', async () => {
     update.mockResolvedValue({ id: 'c1' });
-    renderPanel({ id: 'c1', template_id: 't1', template_mode: 'template' });
+    await renderPanel({ id: 'c1', template_id: 't1', template_mode: 'template' });
     await screen.findByRole('option', { name: 'Saved from a draft' });
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Default email template' }), '');
     await userEvent.click(screen.getByRole('button', { name: 'Use this for new drafts' }));
@@ -73,7 +83,7 @@ describe('TemplatePanel', () => {
 
   it('names the current template and offers to rewrite pending drafts', async () => {
     redraft.mockResolvedValue({ redrafting: 3 });
-    renderPanel({ id: 'c1', template_id: 't1', template_mode: 'template' }, 3);
+    await renderPanel({ id: 'c1', template_id: 't1', template_mode: 'template' }, 3);
     expect(await screen.findByText('Drafting from “Saved from a draft” — exactly as written')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Re-draft 3 unapproved emails' }));
     await waitFor(() => expect(redraft).toHaveBeenCalledWith('c1'));

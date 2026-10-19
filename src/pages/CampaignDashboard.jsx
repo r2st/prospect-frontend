@@ -4,19 +4,15 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import {
   AlertTriangle,
   ArrowLeft,
-  Building2,
   Check,
   CheckCheck,
   Clock,
   Eye,
   FileText,
-  Mail,
-  MessageSquareReply,
   Pause,
   Pencil,
   Play,
   Search,
-  ShieldCheck,
   SkipForward,
   Square,
   Trash2,
@@ -46,7 +42,6 @@ import { cn, formatDate, formatNumber } from '../lib/utils';
 import ConfirmDialog from '../components/ConfirmDialog';
 import EmptyState from '../components/EmptyState';
 import ErrorBoundary from '../components/ErrorBoundary';
-import MetricCard from '../components/MetricCard';
 import Skeleton from '../components/Skeleton';
 import EmailPreviewModal from '../components/campaigns/EmailPreviewModal';
 import AddContactModal from '../components/campaigns/AddContactModal';
@@ -79,6 +74,18 @@ function DashboardSkeleton() {
         ))}
       </div>
       <Skeleton className="h-64 rounded-xl" />
+    </div>
+  );
+}
+
+// One small figure in the stats strip. Label first, so tests and screen
+// readers read "Emails Sent 50".
+function Stat({ label, value, hint, tone }) {
+  return (
+    <div className="min-w-0 px-3 py-2">
+      <p className="truncate text-[11px] font-medium text-gray-500">{label}</p>
+      <p className={cn('text-lg font-semibold leading-tight text-gray-900', tone)}>{value}</p>
+      {hint && <p className="truncate text-[11px] text-gray-400">{hint}</p>}
     </div>
   );
 }
@@ -218,6 +225,15 @@ function SelectBox({ checked, indeterminate = false, onChange, label }) {
 }
 
 function ProspectActions({ p, busy, onApprove, onSkip, onPreview, onEditContact, onAddAtCompany }) {
+  if (p.pending) {
+    // Optimistic row from Add contact; nothing to act on until it's saved.
+    return (
+      <span className="inline-flex items-center justify-end gap-1.5 text-xs text-gray-500" data-testid="prospect-adding">
+        <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-gray-300 border-t-indigo-500" />
+        Adding…
+      </span>
+    );
+  }
   const label = p.contact_name || p.company_name;
   const editable = !SENT.includes(p.status);
   return (
@@ -468,7 +484,7 @@ function ProspectTable({ campaignId, actions, attachments = [], sender = null, d
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {items.map((p) => (
-                  <tr key={p.id} className={cn('hover:bg-gray-50', selected.has(p.id) && 'bg-indigo-50/50')} data-testid="prospect-row">
+                  <tr key={p.id} className={cn('hover:bg-gray-50', selected.has(p.id) && 'bg-indigo-50/50', p.pending && 'opacity-60')} data-testid="prospect-row">
                     <td className="w-10 px-4 py-3">
                       {p.status === 'draft' && (
                         <SelectBox checked={selected.has(p.id)} onChange={() => togglePick(p.id)}
@@ -707,70 +723,46 @@ export default function CampaignDashboard() {
 
       <TemplatePanel key={`${campaign.template_id || ''}:${campaign.template_mode || ''}`} campaign={campaign} draftsPending={campaign.metrics?.drafts_pending || 0} />
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <MetricCard title="Total Prospects" value={formatNumber(metrics.total_prospects)} icon={Users} color="indigo" />
-        <MetricCard title="Emails Sent" value={formatNumber(metrics.emails_sent)} icon={Mail} color="blue" />
-        <MetricCard
-          title="Replies"
-          value={formatNumber(metrics.replies)}
-          subtitle={metrics.emails_sent ? `${formatPercent(metrics.replies / metrics.emails_sent)} reply rate` : undefined}
-          icon={MessageSquareReply}
-          color="green"
-        />
-        <MetricCard
-          title="Bounce Rate"
-          value={formatPercent(metrics.bounce_rate)}
-          subtitle={metrics.bounced ? `${formatNumber(metrics.bounced)} bounced` : undefined}
-          icon={AlertTriangle}
-          color={metrics.bounce_rate > 0.05 ? 'red' : 'orange'}
-        />
-      </div>
+      {/* The drafts are what people come here to act on, so they come first;
+          the numbers follow as one compact strip. */}
+      <ErrorBoundary resetKey={`${id}:prospects`} fallback={({ reset }) => <SectionFallback reset={reset} />}>
+        <ProspectTable campaignId={id} actions={actions} attachments={campaign.attachments || []}
+          sender={campaign.sender || null} draftsPending={status === 'stopped' ? 0 : metrics.drafts_pending} />
+      </ErrorBoundary>
 
-      <div>
-        <h2 className="mb-2 text-sm font-semibold text-gray-900">Discovery &amp; send queue</h2>
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4" data-testid="discovery-metrics">
-          <MetricCard
-            title="Companies Discovered"
+      <section aria-label="Campaign stats"
+        className="grid grid-cols-2 divide-gray-100 rounded-xl border border-gray-200 bg-white shadow-sm sm:grid-cols-4 lg:grid-cols-8 lg:divide-x">
+        <Stat label="Total Prospects" value={formatNumber(metrics.total_prospects)} />
+        <Stat label="Emails Sent" value={formatNumber(metrics.emails_sent)} />
+        <Stat
+          label="Replies"
+          value={formatNumber(metrics.replies)}
+          hint={metrics.emails_sent ? `${formatPercent(metrics.replies / metrics.emails_sent)} reply rate` : undefined}
+        />
+        <Stat
+          label="Bounce Rate"
+          value={formatPercent(metrics.bounce_rate)}
+          hint={metrics.bounced ? `${formatNumber(metrics.bounced)} bounced` : undefined}
+          tone={metrics.bounce_rate > 0.05 ? 'text-red-600' : undefined}
+        />
+        <div className="contents" data-testid="discovery-metrics">
+          <Stat
+            label="Companies Discovered"
             value={formatNumber(metrics.companies_discovered)}
-            subtitle={
+            hint={
               metrics.companies_without_email
                 ? `${formatNumber(metrics.companies_without_email)} without an email yet`
                 : undefined
             }
-            icon={Building2}
-            color="purple"
           />
-          <MetricCard
-            title="Queued to Send"
-            value={formatNumber(metrics.queued_to_send)}
-            subtitle="Drafted and approved"
-            icon={Clock}
-            color="teal"
-          />
-          <MetricCard
-            title="Verified Emails"
-            value={formatNumber(metrics.pending_verified)}
-            subtitle="Cleared to send"
-            icon={ShieldCheck}
-            color="green"
-          />
-          <MetricCard
-            title="Awaiting Verification"
-            value={formatNumber(metrics.pending_unverified)}
-            subtitle="Held until Hunter verifies"
-            icon={AlertTriangle}
-            color="yellow"
-          />
+          <Stat label="Queued to Send" value={formatNumber(metrics.queued_to_send)} hint="Drafted and approved" />
+          <Stat label="Verified Emails" value={formatNumber(metrics.pending_verified)} hint="Cleared to send" />
+          <Stat label="Awaiting Verification" value={formatNumber(metrics.pending_unverified)} hint="Held until Hunter verifies" />
         </div>
-      </div>
+      </section>
 
       <ErrorBoundary resetKey={`${id}:chart`} fallback={({ reset }) => <SectionFallback reset={reset} />}>
         <DailyChart data={campaign.daily} />
-      </ErrorBoundary>
-
-      <ErrorBoundary resetKey={`${id}:prospects`} fallback={({ reset }) => <SectionFallback reset={reset} />}>
-        <ProspectTable campaignId={id} actions={actions} attachments={campaign.attachments || []}
-          sender={campaign.sender || null} draftsPending={status === 'stopped' ? 0 : metrics.drafts_pending} />
       </ErrorBoundary>
 
       {adding && <AddContactModal campaignId={id} onClose={() => setAdding(false)} />}

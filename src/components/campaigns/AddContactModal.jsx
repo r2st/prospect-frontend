@@ -20,14 +20,16 @@ export default function AddContactModal({ campaignId, onClose, initial = null })
   const noWayToEmail = !form.email.trim() && !form.domain.trim();
   const valid = form.company_name.trim() && form.first_name.trim() && !noWayToEmail;
 
-  const submit = async (e) => {
+  // Closes at once: the new row shows in the list as "Adding…" and a toast
+  // reports the outcome (including why, if nothing was added).
+  const submit = (e) => {
     e.preventDefault();
     if (!valid) return;
     const body = Object.fromEntries(
       Object.entries(form).map(([k, v]) => [k, v.trim() || null]).filter(([, v]) => v !== null),
     );
-    const result = await add.mutateAsync(body);
-    if (result?.queued) onClose();
+    add.mutate(body);
+    onClose();
   };
 
   return (

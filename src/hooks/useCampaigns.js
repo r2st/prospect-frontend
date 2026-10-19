@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { campaignsApi, queryClient } from '../api/client';
 import { errMsg } from './useDiscoveryDocuments';
@@ -236,10 +236,10 @@ export function addResultMessage(result) {
   return parts.join(' · ') + tail;
 }
 
-function toastAddResult(result) {
+function toastAddResult(result, opts) {
   const msg = addResultMessage(result);
-  if (result?.queued) toast.success(msg);
-  else toast.error(msg);
+  if (result?.queued) toast.success(msg, opts);
+  else toast.error(msg, opts);
 }
 
 export function useAddContactsToCampaign() {
@@ -254,15 +254,44 @@ export function useAddContactsToCampaign() {
   });
 }
 
+// Optimistic: the server saves the contact into the CRM and runs dedup before
+// it answers, so the new person is shown at the top of the list straight away
+// (as "Adding…") and replaced by the real row when the refetch lands.
 export function useAddManualProspect(id) {
+  const qc = useQueryClient();
+  const listKey = ['campaigns', 'prospects', id];
   return useMutation({
     mutationFn: (data) => campaignsApi.addManual(id, data),
-    onSuccess: (result) => {
-      invalidateCampaign(id);
-      queryClient.invalidateQueries({ queryKey: ['contacts'] });
-      toastAddResult(result);
+    onMutate: async (data) => {
+      await qc.cancelQueries({ queryKey: listKey });
+      const snapshot = qc.getQueriesData({ queryKey: listKey });
+      const name = [data.first_name, data.last_name].filter(Boolean).join(' ');
+      const row = {
+        id: `pending-${Date.now()}`, pending: true, status: 'queued',
+        company_name: data.company_name, company_domain: data.domain || null,
+        contact_name: name, contact_title: data.title || null, to_email: data.email || null,
+      };
+      // Only the views a new queued prospect belongs in: page 1 of All / Queued.
+      for (const [key, old] of snapshot) {
+        const view = key[3] || {};
+        if (!old || (view.page ?? 1) !== 1 || (view.status && view.status !== 'queued')) continue;
+        qc.setQueryData(key, Array.isArray(old)
+          ? [row, ...old]
+          : { ...old, items: [row, ...(old.items || [])], total: (old.total || 0) + 1 });
+      }
+      const toastId = toast.loading(`Adding ${name || data.company_name}…`);
+      return { snapshot, toastId };
     },
-    onError: (e) => toast.error(errMsg(e, 'Could not add that contact')),
+    onSuccess: (result, _data, ctx) => {
+      queryClient.invalidateQueries({ queryKey: ['contacts'] });
+      toastAddResult(result, { id: ctx?.toastId });
+      if (!result?.queued) ctx?.snapshot?.forEach(([key, old]) => qc.setQueryData(key, old));
+    },
+    onError: (e, _data, ctx) => {
+      ctx?.snapshot?.forEach(([key, old]) => qc.setQueryData(key, old));
+      toast.error(errMsg(e, 'Could not add that contact'), { id: ctx?.toastId });
+    },
+    onSettled: () => invalidateCampaign(id),
   });
 }
 

@@ -6,6 +6,7 @@ import { campaignsApi } from '../../api/client';
 import { useRedraftProspect, useSaveDraftAsTemplate } from '../../hooks/useCampaigns';
 import { useEmailTemplates } from '../../hooks/useEmailTemplates';
 import { highlightMergeFields } from '../../lib/mergeFields';
+import { UNSUBSCRIBE_FOOTER } from '../../lib/campaigns';
 import { MergeFieldList, MergeFieldText } from '../MergeFieldText';
 import PdfPreview from './PdfPreview';
 import SenderLine from './SenderLine';
@@ -150,6 +151,24 @@ export function DraftTemplateSwitcher({ campaignId, prospect, templates }) {
   );
 }
 
+// Appended to every campaign email when it's sent, so the preview shows it as
+// the recipient will. The link is a stand-in on purpose: a real one would
+// unsubscribe the prospect if the reviewer clicked it.
+function UnsubscribeFooter() {
+  return (
+    <div className="mt-3 whitespace-pre-line border-t border-gray-200 pt-2 text-xs text-gray-500" data-testid="preview-unsubscribe">
+      <p>
+        {UNSUBSCRIBE_FOOTER.prompt}{' '}
+        <span className="rounded bg-gray-200/70 px-1 font-mono text-[11px] text-gray-600" title="A personal unsubscribe link is added when the email is sent">
+          [unsubscribe link]
+        </span>
+      </p>
+      <p>{UNSUBSCRIBE_FOOTER.address}</p>
+      <p>{UNSUBSCRIBE_FOOTER.poweredBy}</p>
+    </div>
+  );
+}
+
 // The template a draft came from, merge fields highlighted rather than filled.
 function TemplateView({ template }) {
   return (
@@ -263,11 +282,15 @@ export default function EmailPreviewModal({
                 {prospect.subject || '(no subject)'}
               </p>
               <p className="mt-4 text-xs font-medium uppercase tracking-wider text-gray-400">Body</p>
-              <SafeHtml
-                html={prepareEmailHtml(prospect.body)}
-                className={`${EMAIL_BODY_CLASSES} mt-1 rounded-lg border border-gray-100 bg-gray-50 p-4`}
-                data-testid="preview-body"
-              />
+              <div className="mt-1 rounded-lg border border-gray-100 bg-gray-50 p-4">
+                <SafeHtml
+                  html={prepareEmailHtml(prospect.body)}
+                  className={EMAIL_BODY_CLASSES}
+                  data-testid="preview-body"
+                />
+                <UnsubscribeFooter />
+              </div>
+              <p className="mt-1 text-[11px] text-gray-400">The footer is added to every email when it&apos;s sent.</p>
               {attachments.length > 0 && (
                 <div className="mt-3" data-testid="preview-attachments">
                   <p className="text-xs font-medium uppercase tracking-wider text-gray-400">Attachments</p>

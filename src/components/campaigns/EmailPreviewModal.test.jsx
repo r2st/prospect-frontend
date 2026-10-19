@@ -120,6 +120,16 @@ describe('EmailPreviewModal', () => {
     expect(screen.getByTestId('preview-attachments')).toHaveTextContent('SteadyState_Partner_Brief.pdf');
   });
 
+  it('shows the unsubscribe footer the recipient will get, with no live link', () => {
+    renderModal({ campaignId: 'c1' });
+    const footer = screen.getByTestId('preview-unsubscribe');
+    expect(footer).toHaveTextContent("Don't want these emails? Reply UNSUBSCRIBE or click: [unsubscribe link]");
+    expect(footer).toHaveTextContent('DoAide · Bangalore, India');
+    expect(footer).toHaveTextContent('Powered by DoAide Prospect — https://prospect.doaide.com');
+    // Clicking a real one during review would unsubscribe the prospect.
+    expect(footer.querySelector('a')).toBeNull();
+  });
+
   it('shows no attachment section when there is nothing attached', () => {
     renderModal({ campaignId: 'c1' });
     expect(screen.queryByTestId('preview-attachments')).not.toBeInTheDocument();
