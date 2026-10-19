@@ -517,7 +517,7 @@ function CampaignCTA({ navigate }) {
         </div>
         <button
           type="button"
-          onClick={() => navigate('/dialtone/campaigns')}
+          onClick={() => navigate('/campaigns/new')}
           className="inline-flex flex-shrink-0 items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-indigo-700 shadow-sm transition-all hover:bg-indigo-50 hover:shadow-md"
         >
           <Zap className="h-4 w-4" />

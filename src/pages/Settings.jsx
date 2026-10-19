@@ -34,6 +34,7 @@ import SendingKillSwitch from '../components/SendingKillSwitch';
 import ResetWarmupControl from '../components/ResetWarmupControl';
 import TestDeliverability from '../components/TestDeliverability';
 import ApiKeysSettings from '../components/ApiKeysSettings';
+import SettingsDirectory from '../components/SettingsDirectory';
 import { useAuth } from '../context/AuthContext';
 import { isOrgAdmin, isPlatformAdmin } from '../lib/roles';
 import { api } from '../api/client';
@@ -214,7 +215,7 @@ function NotificationToggle({ label, description, checked, onChange }) {
 /* ---------- main component ---------- */
 
 export default function Settings() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const canManageKeys = !!user && isOrgAdmin(user.role) && !isPlatformAdmin(user.role);
   const visibleTabs = TABS.filter((tab) => !tab.orgAdminOnly || canManageKeys);
   // Deep link from Discovery's "add your Gemini key" banner: /settings#api-keys
@@ -977,6 +978,15 @@ export default function Settings() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+        <p className="mt-1 text-sm text-gray-500">
+          Set these up once — Autopilot uses them on every campaign.
+        </p>
+      </div>
+      <SettingsDirectory isAdmin={isAdmin} />
+
+      <h2 className="pt-2 text-base font-semibold text-gray-900">Your account &amp; preferences</h2>
       {/* Tab Navigation */}
       <div className="flex flex-wrap items-center gap-1 rounded-lg border border-gray-200 bg-white p-1 shadow-sm">
         {visibleTabs.map((tab) => {

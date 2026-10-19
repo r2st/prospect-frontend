@@ -306,6 +306,13 @@ describe('CampaignNew wizard', () => {
     expect(await screen.findByText('Sending settings')).toBeInTheDocument();
   });
 
+  it('saves the ICP and skips the sending step with recommended settings', async () => {
+    renderAt('/campaigns/new?id=c1&step=1');
+    await userEvent.click(await screen.findByRole('button', { name: /Use recommended settings/ }));
+    expect(await screen.findByText('Ready to launch')).toBeInTheDocument();
+    expect(camp.update).toHaveBeenCalledTimes(1);
+  });
+
   it('sends a launched campaign to its dashboard', async () => {
     camp.get.mockResolvedValue({ ...CAMPAIGN, status: 'active' });
     renderAt('/campaigns/new?id=c1&step=1');

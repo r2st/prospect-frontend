@@ -63,7 +63,7 @@ function Stepper({ current }) {
   );
 }
 
-function StepFooter({ onBack, onNext, nextLabel = 'Next', nextDisabled, pending, nextIcon: NextIcon = ArrowRight }) {
+function StepFooter({ onBack, onNext, nextLabel = 'Next', nextDisabled, pending, nextIcon: NextIcon = ArrowRight, extra = null }) {
   return (
     <div className="flex flex-col-reverse gap-2 border-t border-gray-200 pt-4 sm:flex-row sm:justify-between">
       {onBack ? (
@@ -78,16 +78,19 @@ function StepFooter({ onBack, onNext, nextLabel = 'Next', nextDisabled, pending,
       ) : (
         <span />
       )}
-      <button
-        type="button"
-        onClick={onNext}
-        disabled={nextDisabled || pending}
-        className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
-      >
-        {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-        {nextLabel}
-        {!pending && <NextIcon className="h-4 w-4" />}
-      </button>
+      <div className="flex flex-col-reverse gap-2 sm:flex-row">
+        {extra}
+        <button
+          type="button"
+          onClick={onNext}
+          disabled={nextDisabled || pending}
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+        >
+          {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+          {nextLabel}
+          {!pending && <NextIcon className="h-4 w-4" />}
+        </button>
+      </div>
     </div>
   );
 }
@@ -392,11 +395,19 @@ function DocumentsStep({ initialSelected, campaign, onCreated }) {
   );
 }
 
-function IcpStep({ campaign, onBack, onNext }) {
+function IcpStep({ campaign, onBack, onNext, onSkipToLaunch }) {
   const [icp, setIcp] = useState(() => normalizeIcp(campaign.icp));
   const update = useUpdateCampaign(campaign.id);
   const set = (key) => (value) => setIcp((prev) => ({ ...prev, [key]: value }));
   const empty = isIcpEmpty(icp);
+  const save = (onSuccess) =>
+    update.mutate(
+      {
+        icp: { ...icp, value_props: icp.value_props.map((v) => v.trim()).filter(Boolean) },
+        baseIcp: campaign.icp_json,
+      },
+      { onSuccess }
+    );
 
   return (
     <div className="space-y-5">
@@ -466,17 +477,25 @@ function IcpStep({ campaign, onBack, onNext }) {
 
       <StepFooter
         onBack={onBack}
-        onNext={() =>
-          update.mutate(
-            {
-              icp: { ...icp, value_props: icp.value_props.map((v) => v.trim()).filter(Boolean) },
-              baseIcp: campaign.icp_json,
-            },
-            { onSuccess: onNext }
-          )
-        }
+        onNext={() => save(onNext)}
         nextDisabled={empty}
         pending={update.isPending}
+        extra={
+          // The sending step's defaults (sender, template, a warm-up-safe daily
+          // limit, review before send) were already chosen when the campaign
+          // was created, so most people only ever clicked Next through it.
+          onSkipToLaunch && !empty ? (
+            <button
+              type="button"
+              onClick={() => save(onSkipToLaunch)}
+              disabled={update.isPending}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100 disabled:opacity-50"
+            >
+              <Sparkles className="h-4 w-4" />
+              Use recommended settings
+            </button>
+          ) : null
+        }
       />
     </div>
   );
@@ -787,7 +806,13 @@ export default function CampaignNew() {
           )}
 
           {step === 1 && campaign && !analyzing && (
-            <IcpStep key={campaign.id} campaign={campaign} onBack={() => goTo(0)} onNext={() => goTo(2)} />
+            <IcpStep
+              key={campaign.id}
+              campaign={campaign}
+              onBack={() => goTo(0)}
+              onNext={() => goTo(2)}
+              onSkipToLaunch={() => goTo(3)}
+            />
           )}
           {step === 2 && campaign && !analyzing && (
             <SettingsStep key={campaign.id} campaign={campaign} onBack={() => goTo(1)} onNext={() => goTo(3)} />

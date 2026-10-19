@@ -2,61 +2,21 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
-  LayoutDashboard,
-  BarChart3,
-  Building2,
-  GitBranch,
-  Upload,
-  Send,
-  Bell,
-  Settings,
   Menu,
   X,
-  Sparkles,
-  ListOrdered,
-  FileText,
-  Folder,
-  Newspaper,
-  Rocket,
-  CreditCard,
-  Users,
   Search,
-  HeartPulse,
-  CheckSquare,
-  PieChart,
-  Inbox,
-  BookOpen,
-  Phone,
-  Landmark,
   ChevronRight,
-  Brain,
+  ChevronLeft,
   LogOut,
-  UserCog,
-  Activity,
-  Radio,
-  Radar,
-  Stethoscope,
-  Gauge,
-  MailCheck,
-  PenLine,
-  Globe,
-  MapPin,
-  Target,
-  Beaker,
-  Clock,
-  Ear,
-  SlidersHorizontal,
-  ShieldCheck,
-  Bot,
-  HeartHandshake,
-  UserPlus,
-  CalendarCheck,
-  ShieldOff,
-  LifeBuoy,
-  Sparkle,
   ChevronUp,
-  KeyRound,
+  Sparkles,
+  Plus,
+  Building2,
+  Users,
+  BarChart3,
+  UserCog,
   MessageSquare,
+  LifeBuoy,
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { emailApi } from '../api/client';
@@ -69,152 +29,26 @@ import ImpersonationBanner from './ImpersonationBanner';
 import Logo, { LogoMark } from './Logo';
 import { DoAideFooter } from './DoAideBrand';
 import FeedbackWidget, { pageNameFromPath } from './FeedbackWidget';
+import {
+  heroNav,
+  primaryNav,
+  settingsNav,
+  platformNav,
+  isActivePath as matchPath,
+  activeTab,
+  isGroupActive,
+} from '../lib/navigation';
 
-// Sidebar navigation, grouped to match a salesperson's daily flow:
-// plan the day (Workspace) → watch the agent (Dialtone) → build the list
-// (Leads) → reach out (Outreach) → manage accounts (Clients) → look things up
-// (Resources).
-//
-// Dialtone gets its own section: it is an autonomous agent that sources, sends,
-// triages and can halt itself, and its surfaces were previously scattered
-// across three unrelated groups — so "what is the agent doing, and is it OK?"
-// had no single place to answer it.
-// Items flagged `advanced` sit behind a per-section "More" toggle so the
-// everyday pages stay visible; the section that owns the current route opens
-// itself.
-const navSections = [
-  {
-    key: 'workspace',
-    label: 'Workspace',
-    items: [
-      { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-      { name: 'Pipeline', href: '/pipeline', icon: GitBranch },
-      { name: 'Tasks', href: '/tasks', icon: CheckSquare },
-      { name: 'Analytics', href: '/analytics', icon: BarChart3 },
-      { advanced: true, name: 'Daily Activity', href: '/daily-activity', icon: Activity },
-    ],
-  },
-  {
-    key: 'dialtone',
-    label: 'Autopilot',
-    items: [
-      { name: 'Campaigns', href: '/dialtone/campaigns', icon: BarChart3, hero: true },
-      { name: 'Console', href: '/dialtone', icon: Radio, end: true },
-      { name: 'Replies', href: '/dialtone/inbox', icon: MailCheck },
-      { name: 'AI Drafts', href: '/dialtone/drafts', icon: PenLine },
-      { advanced: true, name: 'Templates', href: '/dialtone/templates', icon: FileText },
-      { advanced: true, name: 'A/B Tests', href: '/dialtone/ab-tests', icon: Beaker },
-      { advanced: true, name: 'Send Timing', href: '/dialtone/send-timing', icon: Clock },
-      { advanced: true, name: 'Policies', href: '/dialtone/policies', icon: SlidersHorizontal },
-      { name: 'Prospecting', href: '/prospecting', icon: Radar },
-      { advanced: true, name: 'Social Listening', href: '/agents/social-listening', icon: Ear },
-      { advanced: true, name: 'ICP', href: '/dialtone/icp', icon: Target },
-      { advanced: true, name: 'Places Discovery', href: '/dialtone/discovery', icon: MapPin },
-      { advanced: true, name: 'Health', href: '/dialtone/health', icon: Stethoscope },
-      { advanced: true, name: 'Senders', href: '/dialtone/senders', icon: Gauge },
-      { advanced: true, name: 'Suppression', href: '/dialtone/suppression', icon: ShieldOff },
-      { advanced: true, name: 'Domains', href: '/deliverability/domains', icon: Globe },
-    ],
-  },
-  {
-    // Autonomous agents that act on their own within guardrails.
-    key: 'agents',
-    label: 'Agents',
-    items: [
-      { name: 'Meeting Booking', href: '/agents/booking', icon: CalendarCheck },
-      { name: 'Deal Progression', href: '/agents/deals', icon: Bot },
-      { name: 'Client Success', href: '/agents/client-success', icon: HeartHandshake },
-      { name: 'Referrals', href: '/agents/referrals', icon: UserPlus },
-    ],
-  },
-  {
-    key: 'leads',
-    label: 'Leads & Prospects',
-    items: [
-      { name: 'Companies', href: '/companies', icon: Building2 },
-      { name: 'Contacts', href: '/contacts', icon: Users },
-      { name: 'Discovery', href: '/discovery', icon: Sparkles },
-      { advanced: true, name: 'Groups', href: '/groups', icon: Folder },
-      { advanced: true, name: 'News', href: '/news', icon: Newspaper },
-      { name: 'Import', href: '/import', icon: Upload },
-      { advanced: true, name: 'Business Card', href: '/scan', icon: CreditCard },
-    ],
-  },
-  {
-    key: 'outreach',
-    label: 'Outreach',
-    items: [
-      { name: 'Inbox', href: '/inbox', icon: Inbox },
-      { name: 'Campaigns', href: '/outreach', icon: Send },
-      { name: 'Autopilot Campaigns', href: '/campaigns', icon: Rocket },
-      { advanced: true, name: 'Calls', href: '/calls', icon: Phone },
-      { name: 'Sequences', href: '/sequences', icon: ListOrdered },
-      { name: 'Follow-ups', href: '/follow-ups', icon: Bell },
-      { advanced: true, name: 'Demos', href: '/demos', icon: Rocket },
-    ],
-  },
-  {
-    key: 'clients',
-    label: 'Clients',
-    items: [
-      { name: 'Clients', href: '/clients', icon: HeartPulse },
-      { advanced: true, name: 'Client Dashboard', href: '/client-dashboard', icon: PieChart },
-      { name: 'Reports', href: '/reports', icon: BarChart3 },
-      { advanced: true, name: 'Sentiment', href: '/sentiment', icon: Brain },
-    ],
-  },
-  {
-    key: 'fundraising',
-    label: 'Fundraising',
-    items: [
-      { name: 'Investors', href: '/investors', icon: Landmark },
-    ],
-  },
-  {
-    key: 'resources',
-    label: 'Resources',
-    items: [
-      { name: 'Knowledge Base', href: '/knowledge', icon: BookOpen },
-      { advanced: true, name: 'GDPR Requests', href: '/gdpr', icon: ShieldCheck },
-      { advanced: true, name: 'Features', href: '/features', icon: Sparkle },
-      { name: 'Help Center', href: '/help', icon: LifeBuoy },
-    ],
-  },
-];
-
-// Platform admin section — cross-org management, shown only to platform_admin
-// users (SaaS Phase 2). Prepended to the nav so the "god view" sits at the top.
-const platformSection = {
-  key: 'platform',
-  label: 'Platform',
-  items: [
-    { name: 'Organizations', href: '/platform', icon: ShieldCheck, end: true },
-    // Rotating the Google OAuth client or a provider key without SSH — the
-    // credentials belong to the deployment, so they live beside the org list
-    // rather than in a tenant's own /settings.
-    { name: 'API Credentials', href: '/platform/credentials', icon: KeyRound },
-  ],
-};
-
-// Flatten all nav items for finding current page name
-const allNavItems = [
-  ...navSections.flatMap(s => s.items),
-  { name: 'Organization', href: '/settings/organization', icon: Building2 },
-  { name: 'Team', href: '/settings/team', icon: Users },
-  { name: 'Usage', href: '/settings/usage', icon: BarChart3 },
-  ...platformSection.items,
-  { name: 'Settings', href: '/settings', icon: Settings },
-  { name: 'Feedback', href: '/admin/feedback', icon: MessageSquare },
-];
-
-const NAV_PREFS_KEY = 'landline.nav.collapsedSections';
+// The nav config (hero item, areas and their tabs, the Settings directory)
+// lives in lib/navigation so the Settings page can list the same pages.
+const allGroups = [heroNav, ...primaryNav, settingsNav, platformNav];
 
 export default function Layout({ children }) {
   const location = useLocation();
   const { user, isAdmin, isPlatformAdmin, logout } = useAuth();
-  // Platform admins get an extra top-level nav section for cross-org management.
-  const sections = useMemo(
-    () => (isPlatformAdmin ? [platformSection, ...navSections] : navSections),
+  // Platform admins get an extra top-level item for cross-org management.
+  const navItems = useMemo(
+    () => (isPlatformAdmin ? [...primaryNav, platformNav] : primaryNav),
     [isPlatformAdmin]
   );
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -225,49 +59,12 @@ export default function Layout({ children }) {
   const [accountOpen, setAccountOpen] = useState(false);
   const accountMenuRef = useRef(null);
 
-  // Prefix-matching keeps a parent lit on its detail routes (/companies/:id).
-  // `end` opts out for a parent that has real siblings under it: without it
-  // /dialtone would stay lit on /dialtone/health and two items would look
-  // active at once.
-  const isActivePath = (href, end = false) =>
-    location.pathname === href ||
-    (!end && href !== '/' && location.pathname.startsWith(href));
+  const isActivePath = (href, end = false) => matchPath(location.pathname, href, end);
 
-  // Collapsible nav sections. Persist the user's collapsed/expanded choice so
-  // the sidebar feels stable across visits; default everything expanded.
-  const [collapsed, setCollapsed] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem(NAV_PREFS_KEY)) || {};
-    } catch {
-      return {};
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(NAV_PREFS_KEY, JSON.stringify(collapsed));
-    } catch {
-      /* ignore quota / privacy-mode errors */
-    }
-  }, [collapsed]);
-
-  const [showMore, setShowMore] = useState({});
-  const toggleMore = (key) => setShowMore((prev) => ({ ...prev, [key]: !prev[key] }));
-
-  const toggleSection = (key) =>
-    setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
-
-  // Always reveal the section that owns the current route so the active page is
-  // never hidden inside a collapsed group (e.g. after a command-palette jump).
-  useEffect(() => {
-    const active = sections.find((s) =>
-      s.items.some((it) => isActivePath(it.href, it.end))
-    );
-    if (active && collapsed[active.key]) {
-      setCollapsed((prev) => ({ ...prev, [active.key]: false }));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname]);
+  // The area that owns the current route, and the page within it. Drives the
+  // lit sidebar item, the tab strip above the page and the breadcrumb.
+  const currentGroup = allGroups.find((g) => isGroupActive(location.pathname, g)) || null;
+  const currentTab = currentGroup ? activeTab(location.pathname, currentGroup) : null;
 
   // ⌘K / Ctrl+K opens the command palette from anywhere.
   useEffect(() => {
@@ -311,39 +108,21 @@ export default function Layout({ children }) {
   // Numeric "needs reply" count for the Inbox nav item and the bell badge.
   const inboxUnread = useInboxUnread();
 
-  const currentPage = allNavItems.find((item) => isActivePath(item.href, item.end));
+  const currentPage = currentTab || currentGroup;
 
-  // Section-aware breadcrumb trail. Non-final segments with an `href` render as
-  // links so related pages are one click away (e.g. back to the Companies list
-  // from a company detail view).
+  // Area → page breadcrumb. Detail routes (/companies/:id) add a final crumb
+  // and link the list page above them.
   const breadcrumbs = useMemo(() => {
-    const path = location.pathname;
-    if (/^\/companies\/.+/.test(path)) {
-      return [
-        { label: 'Leads & Prospects' },
-        { label: 'Companies', href: '/companies' },
-        { label: 'Company detail' },
-      ];
+    if (!currentGroup) return [{ label: 'Dashboard', href: '/' }];
+    const trail = [{ label: currentGroup.name, href: currentGroup.href }];
+    if (currentTab && currentTab.href !== currentGroup.href) {
+      trail.push({ label: currentTab.name, href: currentTab.href });
     }
-    if (/^\/investors\/.+/.test(path)) {
-      return [
-        { label: 'Fundraising' },
-        { label: 'Investors', href: '/investors' },
-        { label: 'Investor detail' },
-      ];
+    if (currentTab && location.pathname !== currentTab.href) {
+      trail.push({ label: location.pathname.endsWith('/new') ? 'New' : 'Detail' });
     }
-    if (path === '/settings') {
-      return [{ label: 'Workspace' }, { label: 'Settings', href: '/settings' }];
-    }
-    for (const section of sections) {
-      const item = section.items.find((it) => isActivePath(it.href, it.end));
-      if (item) {
-        return [{ label: section.label }, { label: item.name, href: item.href }];
-      }
-    }
-    return [{ label: 'Workspace' }, { label: 'Dashboard', href: '/' }];
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname]);
+    return trail;
+  }, [currentGroup, currentTab, location.pathname]);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -379,12 +158,13 @@ export default function Layout({ children }) {
     return () => { document.body.style.overflow = ''; };
   }, [mobileOpen]);
 
-  const NavLink = ({ item, showBadge, count = 0, onClick }) => {
-    const isActive = isActivePath(item.href, item.end);
+  const NavLink = ({ item, active, showBadge, count = 0, onClick }) => {
+    const isActive = active ?? isActivePath(item.href, item.end);
     return (
       <Link
         to={item.href}
         onClick={onClick}
+        aria-current={isActive ? 'page' : undefined}
         className={cn(
           'group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
           isActive
@@ -402,11 +182,6 @@ export default function Layout({ children }) {
           )}
         />
         {item.name}
-        {item.hero && (
-          <span className="ml-0.5 inline-flex items-center">
-            <Sparkle className="h-3 w-3 text-amber-400" />
-          </span>
-        )}
         {count > 0 ? (
           <span
             className="ml-auto inline-flex min-w-[1.25rem] flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white"
@@ -420,6 +195,8 @@ export default function Layout({ children }) {
       </Link>
     );
   };
+
+  const heroActive = currentGroup === heroNav;
 
   const SidebarContent = (
     <>
@@ -439,80 +216,55 @@ export default function Layout({ children }) {
 
       {/* min-h-0 lets this actually shrink and scroll: a flex child defaults to
           min-height:auto, which pins it to its content height. */}
-      <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-4">
-        {sections.map((section) => {
-          const isCollapsed = !!collapsed[section.key];
-          const hasActive = section.items.some((it) => isActivePath(it.href, it.end));
-          const sectionHasBadge =
-            section.key === 'outreach' && hasNewReplies;
-          return (
-            <div
-              key={section.key}
-              className={cn(
-                section.key === 'dialtone' && !isCollapsed && 'rounded-lg bg-indigo-50/40 py-1'
-              )}
-            >
-              <button
-                type="button"
-                onClick={() => toggleSection(section.key)}
-                aria-expanded={!isCollapsed}
-                className={cn(
-                  'group flex w-full items-center gap-1.5 rounded-md px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider transition-colors hover:text-gray-600',
-                  section.key === 'dialtone' ? 'text-indigo-500' : 'text-gray-400'
-                )}
-              >
-                <ChevronRight
-                  className={cn(
-                    'h-3.5 w-3.5 flex-shrink-0 transition-transform duration-200',
-                    !isCollapsed && 'rotate-90'
-                  )}
-                />
-                <span>{section.label}</span>
-                {/* When collapsed, surface that the active page or a new reply
-                    lives inside this section. */}
-                {isCollapsed && (hasActive || sectionHasBadge) && (
-                  <span
-                    className={cn(
-                      'ml-auto h-1.5 w-1.5 rounded-full',
-                      sectionHasBadge ? 'bg-red-500' : 'bg-indigo-500'
-                    )}
-                  />
-                )}
-              </button>
-              {!isCollapsed && (
-                <div className="mt-0.5 space-y-0.5 pb-1">
-                  {section.items
-                    .filter(
-                      (item) =>
-                        !item.advanced ||
-                        showMore[section.key] ||
-                        isActivePath(item.href, item.end)
-                    )
-                    .map((item) => (
-                      <NavLink
-                        key={item.name}
-                        item={item}
-                        showBadge={item.name === 'Inbox' && hasNewReplies}
-                        count={item.name === 'Inbox' ? inboxUnread : 0}
-                      />
-                    ))}
-                  {section.items.some((it) => it.advanced) && (
-                    <button
-                      type="button"
-                      onClick={() => toggleMore(section.key)}
-                      aria-expanded={!!showMore[section.key]}
-                      className="w-full rounded-md px-3 py-1 text-left text-xs text-gray-400 transition-colors hover:text-gray-600"
-                    >
-                      {showMore[section.key]
-                        ? 'Show less'
-                        : `More (${section.items.filter((it) => it.advanced).length})`}
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
+      <nav aria-label="Main" className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-4">
+        {/* The hero: Autopilot Campaigns is the product, so it gets the one
+            coloured block in an otherwise neutral sidebar, plus a direct
+            "new campaign" shortcut. */}
+        <div
+          className={cn(
+            'relative mb-3 overflow-hidden rounded-xl bg-gradient-to-br from-indigo-600 via-indigo-500 to-purple-600 p-0.5 shadow-sm transition-shadow hover:shadow-md',
+            heroActive && 'ring-2 ring-indigo-300 ring-offset-1'
+          )}
+        >
+          <Link
+            to={heroNav.href}
+            aria-current={heroActive ? 'page' : undefined}
+            className="flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-white"
+          >
+            <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-white/20">
+              <heroNav.icon className="h-[18px] w-[18px]" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="flex items-center gap-1 text-sm font-semibold leading-tight">
+                {heroNav.name}
+                <Sparkles className="h-3.5 w-3.5 flex-shrink-0 text-amber-200" aria-hidden="true" />
+              </span>
+              <span className="block text-[11px] leading-tight text-indigo-100">
+                Finds, writes &amp; follows up
+              </span>
+            </span>
+          </Link>
+          <Link
+            to="/campaigns/new"
+            className="mx-1 mb-1 flex items-center justify-center gap-1.5 rounded-lg bg-white/15 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/25"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            New campaign
+          </Link>
+        </div>
+
+        {navItems.map((item) => (
+          <NavLink
+            key={item.key}
+            item={item}
+            active={currentGroup === item}
+            showBadge={item.key === 'inbox' && hasNewReplies}
+            count={item.key === 'inbox' ? inboxUnread : 0}
+          />
+        ))}
+
+        <div className="my-2 border-t border-gray-100" />
+        <NavLink item={settingsNav} active={currentGroup === settingsNav} />
       </nav>
 
       {/* flex-shrink-0 keeps the footer at its natural height instead of being
@@ -530,10 +282,6 @@ export default function Layout({ children }) {
               aria-label="Account and workspace settings"
               className="absolute inset-x-3 bottom-full z-50 mb-2 max-h-[60vh] space-y-0.5 overflow-y-auto rounded-xl border border-gray-200 bg-white p-1.5 shadow-lg"
             >
-              <NavLink
-                item={{ name: 'Settings', href: '/settings', icon: Settings, end: true }}
-                onClick={() => setAccountOpen(false)}
-              />
               <NavLink
                 item={{ name: 'Organization', href: '/settings/organization', icon: Building2 }}
                 onClick={() => setAccountOpen(false)}
@@ -558,6 +306,10 @@ export default function Layout({ children }) {
                   onClick={() => setAccountOpen(false)}
                 />
               )}
+              <NavLink
+                item={{ name: 'Help Center', href: '/help', icon: LifeBuoy }}
+                onClick={() => setAccountOpen(false)}
+              />
               {user && (
                 <>
                   <div className="my-1 border-t border-gray-100" />
@@ -709,23 +461,51 @@ export default function Layout({ children }) {
               <span>Search…</span>
               <kbd className="rounded border border-gray-200 bg-white px-1.5 py-0.5 text-[11px] font-medium text-gray-400">⌘K</kbd>
             </button>
-            <Link
-              to="/inbox"
-              className="relative rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
-              aria-label={inboxUnread > 0 ? `${inboxUnread} conversations need a reply` : 'Email inbox'}
-              title={inboxUnread > 0 ? `${inboxUnread} conversations need a reply` : 'Email inbox'}
-            >
-              <Bell className="h-5 w-5" />
-              {inboxUnread > 0 ? (
-                <span className="absolute -right-0.5 -top-0.5 inline-flex min-w-[1.1rem] items-center justify-center rounded-full bg-indigo-600 px-1 py-0.5 text-[10px] font-semibold leading-none text-white ring-2 ring-white">
-                  {inboxUnread > 99 ? '99+' : inboxUnread}
-                </span>
-              ) : hasNewReplies ? (
-                <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white" />
-              ) : null}
-            </Link>
           </div>
         </header>
+
+        {/* Sibling pages of the current area — the rows that used to fill the
+            sidebar. Settings pages are unrelated to each other, so they get a
+            way back to the directory instead of a strip. */}
+        {currentGroup && currentGroup !== settingsNav && currentGroup.tabs.length > 1 && (
+          <div className="border-b border-gray-200 bg-white">
+            <nav
+              aria-label={`${currentGroup.name} pages`}
+              className="mx-auto flex max-w-7xl gap-1 overflow-x-auto px-4 sm:px-6 lg:px-8"
+            >
+              {currentGroup.tabs.map((tab) => {
+                const on = tab === currentTab;
+                return (
+                  <Link
+                    key={tab.href}
+                    to={tab.href}
+                    aria-current={on ? 'page' : undefined}
+                    className={cn(
+                      '-mb-px inline-flex flex-shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition-colors',
+                      on
+                        ? 'border-indigo-600 text-indigo-700'
+                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-800'
+                    )}
+                  >
+                    <tab.icon className="h-4 w-4" />
+                    {tab.name}
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+        )}
+        {currentGroup === settingsNav && currentTab && currentTab.href !== '/settings' && (
+          <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 lg:px-8">
+            <Link
+              to="/settings"
+              className="inline-flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-gray-900"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              All settings
+            </Link>
+          </div>
+        )}
 
         <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
           {children}
