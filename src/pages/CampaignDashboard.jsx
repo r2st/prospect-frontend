@@ -13,6 +13,7 @@ import {
   Pencil,
   Play,
   Search,
+  Send,
   SkipForward,
   Square,
   Trash2,
@@ -224,7 +225,7 @@ function SelectBox({ checked, indeterminate = false, onChange, label }) {
   );
 }
 
-function ProspectActions({ p, busy, onApprove, onSkip, onPreview, onEditContact, onAddAtCompany }) {
+function ProspectActions({ p, busy, sending, onApprove, onSkip, onSendNow, onPreview, onEditContact, onAddAtCompany }) {
   if (p.pending) {
     // Optimistic row from Add contact; nothing to act on until it's saved.
     return (
@@ -272,6 +273,23 @@ function ProspectActions({ p, busy, onApprove, onSkip, onPreview, onEditContact,
           Approve
         </button>
       )}
+      {onSendNow && (p.status === 'draft' || p.status === 'approved') && (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => onSendNow(p)}
+          aria-label={`Send email to ${label} now`}
+          title="Approve and send right away"
+          className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-50 disabled:opacity-50"
+        >
+          {sending ? (
+            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-indigo-200 border-t-indigo-600" />
+          ) : (
+            <Send className="h-3.5 w-3.5" />
+          )}
+          {sending ? 'Sending…' : 'Send now'}
+        </button>
+      )}
       {(p.status === 'draft' || p.status === 'queued') && (
         <button
           type="button"
@@ -296,7 +314,7 @@ function ProspectActions({ p, busy, onApprove, onSkip, onPreview, onEditContact,
   );
 }
 
-function ProspectTable({ campaignId, actions, attachments = [], sender = null, draftsPending = 0 }) {
+function ProspectTable({ campaignId, actions, attachments = [], sender = null, draftsPending = 0, canSend = false }) {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState('');
   // Draft ids picked for "Approve selected". Only drafts can be picked.
@@ -311,6 +329,14 @@ function ProspectTable({ campaignId, actions, attachments = [], sender = null, d
   const approve = (p) => actions.approve(p.id, { onSuccess: () => setPreviewing(null) });
   const skip = (p) => actions.skip(p.id, { onSuccess: () => setPreviewing(null) });
   const busyFor = (p) => actions.pendingProspect === p.id;
+  // "Ana Li at acme.com" — who the toast says the email went to.
+  const recipient = (p) => [p.contact_name || p.contact_email, p.company_domain || p.company_name].filter(Boolean).join(' at ');
+  const sendNow = canSend ? (p) => actions.sendNow(p.id, recipient(p), { onSuccess: () => setPreviewing(null) }) : null;
+  const rowProps = (p) => ({
+    p, busy: busyFor(p), sending: actions.sendingProspect === p.id,
+    onApprove: approve, onSkip: skip, onSendNow: sendNow, onPreview: setPreviewing,
+    onEditContact: setEditing, onAddAtCompany: setAddingAt,
+  });
 
   const draftsOnPage = items.filter((p) => p.status === 'draft');
   // Drop ids that stopped being drafts (approved one by one, re-filtered away).
@@ -323,6 +349,9 @@ function ProspectTable({ campaignId, actions, attachments = [], sender = null, d
     return next;
   });
   const toggleAll = () => setSelected(allPicked ? new Set() : new Set(draftsOnPage.map((p) => p.id)));
+  const SEND_NOW_MAX = 10;
+  const sendSelected = () =>
+    actions.sendNowMany(picked, { onSuccess: () => setSelected(new Set()) });
   const approveSelected = () =>
     // An explicit pick is approved as picked, like the per-row button.
     actions.bulkApprove({ prospect_ids: picked, verified_only: false }, { onSuccess: () => setSelected(new Set()) });
@@ -372,6 +401,20 @@ function ProspectTable({ campaignId, actions, attachments = [], sender = null, d
                 <Check className="h-3.5 w-3.5" />
                 Approve selected
               </button>
+              {canSend && (
+                <button
+                  type="button"
+                  disabled={actions.isSendingMany || picked.length > SEND_NOW_MAX}
+                  onClick={sendSelected}
+                  title={picked.length > SEND_NOW_MAX
+                    ? `Send now handles up to ${SEND_NOW_MAX} at a time; approve larger batches instead`
+                    : 'Approve and send the selected emails right away'}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-50 disabled:opacity-50"
+                >
+                  <Send className="h-3.5 w-3.5" />
+                  {actions.isSendingMany ? 'Sending…' : 'Send selected now'}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setSelected(new Set())}
@@ -454,7 +497,7 @@ function ProspectTable({ campaignId, actions, attachments = [], sender = null, d
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-gray-500">{p.sent_at ? `Sent ${formatDate(p.sent_at)}` : 'Not sent'}</span>
-                  <ProspectActions onEditContact={setEditing} onAddAtCompany={setAddingAt} p={p} busy={busyFor(p)} onApprove={approve} onSkip={skip} onPreview={setPreviewing} />
+                  <ProspectActions {...rowProps(p)} />
                 </div>
               </li>
             ))}
@@ -511,7 +554,7 @@ function ProspectTable({ campaignId, actions, attachments = [], sender = null, d
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-500">{formatDate(p.sent_at)}</td>
                     <td className="whitespace-nowrap px-4 py-3">
-                      <ProspectActions onEditContact={setEditing} onAddAtCompany={setAddingAt} p={p} busy={busyFor(p)} onApprove={approve} onSkip={skip} onPreview={setPreviewing} />
+                      <ProspectActions {...rowProps(p)} />
                     </td>
                   </tr>
                 ))}
@@ -727,7 +770,8 @@ export default function CampaignDashboard() {
           the numbers follow as one compact strip. */}
       <ErrorBoundary resetKey={`${id}:prospects`} fallback={({ reset }) => <SectionFallback reset={reset} />}>
         <ProspectTable campaignId={id} actions={actions} attachments={campaign.attachments || []}
-          sender={campaign.sender || null} draftsPending={status === 'stopped' ? 0 : metrics.drafts_pending} />
+          sender={campaign.sender || null} draftsPending={status === 'stopped' ? 0 : metrics.drafts_pending}
+          canSend={status === 'active'} />
       </ErrorBoundary>
 
       <section aria-label="Campaign stats"

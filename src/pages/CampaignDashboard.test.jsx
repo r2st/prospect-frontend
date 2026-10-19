@@ -12,6 +12,8 @@ const api = {
   approve: vi.fn(),
   bulkApprove: vi.fn(),
   addManual: vi.fn(),
+  sendNow: vi.fn(),
+  sendNowMany: vi.fn(),
   skip: vi.fn(),
   discover: vi.fn(),
 };
@@ -25,6 +27,8 @@ vi.mock('../api/client', () => ({
     approve: (...a) => api.approve(...a),
     bulkApprove: (...a) => api.bulkApprove(...a),
     addManual: (...a) => api.addManual(...a),
+    sendNow: (...a) => api.sendNow(...a),
+    sendNowMany: (...a) => api.sendNowMany(...a),
     skip: (...a) => api.skip(...a),
     discover: (...a) => api.discover(...a),
   },
@@ -268,6 +272,42 @@ describe('CampaignDashboard', () => {
     expect(within(screen.getByTestId('bulk-approve-bar')).getByText('1 selected')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('checkbox', { name: 'Select all drafts on this page' }));
     expect(screen.queryByText('1 selected')).not.toBeInTheDocument();
+  });
+
+  it('sends one draft right away and names who it went to', async () => {
+    api.sendNow.mockResolvedValue({ id: 'p1', outcome: 'sent', status: 'sent' });
+    renderPage();
+    const [row] = await screen.findAllByTestId('prospect-row');
+    await userEvent.click(within(row).getByRole('button', { name: 'Send email to Ana Li now' }));
+    await waitFor(() => expect(api.sendNow).toHaveBeenCalledWith('c1', 'p1'));
+    await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith('Email sent to Ana Li at acme.com'));
+  });
+
+  it('says why when send now could not send', async () => {
+    api.sendNow.mockResolvedValue({ id: 'p1', outcome: 'skipped', detail: 'Already emailed — never sent twice', status: 'skipped' });
+    renderPage();
+    const [row] = await screen.findAllByTestId('prospect-row');
+    await userEvent.click(within(row).getByRole('button', { name: 'Send email to Ana Li now' }));
+    await waitFor(() => expect(toastMock.error).toHaveBeenCalledWith('Not sent — Already emailed — never sent twice'));
+  });
+
+  it('offers no send now on a paused campaign', async () => {
+    api.get.mockResolvedValue({ ...CAMPAIGN, status: 'paused' });
+    renderPage();
+    const [row] = await screen.findAllByTestId('prospect-row');
+    expect(within(row).queryByRole('button', { name: /now$/ })).not.toBeInTheDocument();
+  });
+
+  it('sends the ticked drafts now', async () => {
+    api.sendNowMany.mockResolvedValue({
+      sent: 1, results: [{ id: 'p1', outcome: 'sent' }],
+    });
+    renderPage();
+    const [row] = await screen.findAllByTestId('prospect-row');
+    await userEvent.click(within(row).getByRole('checkbox', { name: 'Select Ana Li' }));
+    await userEvent.click(within(screen.getByTestId('bulk-approve-bar')).getByRole('button', { name: /Send selected now/ }));
+    await waitFor(() => expect(api.sendNowMany).toHaveBeenCalledWith('c1', ['p1']));
+    await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith('1 sent'));
   });
 
   it('shows a new contact in the list at once while it is being added', async () => {

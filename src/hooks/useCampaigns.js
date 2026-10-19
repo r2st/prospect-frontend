@@ -166,6 +166,33 @@ export function useCampaignActions(id) {
     onError: (e) => toast.error(errMsg(e, 'Could not approve the drafts')),
   });
 
+  // Send now: { pid, to } where `to` names the recipient for the toast.
+  const sendNow = useMutation({
+    mutationFn: ({ pid }) => campaignsApi.sendNow(id, pid),
+    onSuccess: (r, { to }) => {
+      invalidateCampaign(id);
+      if (r?.outcome === 'sent') toast.success(`Email sent to ${to}`);
+      else if (r?.outcome === 'held') toast(`Approved, not sent yet — ${r.detail || 'it will go out from the queue'}`, { icon: '⏳' });
+      else toast.error(`Not sent — ${r?.detail || r?.outcome || 'unknown reason'}`);
+    },
+    onError: (e) => toast.error(errMsg(e, 'Could not send the email')),
+  });
+
+  const sendNowMany = useMutation({
+    mutationFn: (pids) => campaignsApi.sendNowMany(id, pids),
+    onSuccess: (r) => {
+      invalidateCampaign(id);
+      const results = r?.results || [];
+      const sent = results.filter((x) => x.outcome === 'sent').length;
+      const notSent = results.filter((x) => x.outcome !== 'sent');
+      const why = [...new Set(notSent.map((x) => x.detail || x.outcome))].join('; ');
+      const msg = `${sent} sent${notSent.length ? ` · ${notSent.length} not sent (${why})` : ''}`;
+      if (sent) toast.success(msg);
+      else toast.error(msg);
+    },
+    onError: (e) => toast.error(errMsg(e, 'Could not send the emails')),
+  });
+
   const skip = useMutation({
     mutationFn: (pid) => campaignsApi.skip(id, pid),
     onSuccess: () => {
@@ -185,11 +212,17 @@ export function useCampaignActions(id) {
     skip: (pid, opts) => skip.mutate(pid, opts),
     // All verified drafts: bulkApprove(). Picked rows: bulkApprove({ prospect_ids }).
     bulkApprove: (data = { verified_only: true }, opts) => bulkApprove.mutate(data, opts),
+    sendNow: (pid, to, opts) => sendNow.mutate({ pid, to }, opts),
+    sendNowMany: (pids, opts) => sendNowMany.mutate(pids, opts),
+    isSendingMany: sendNowMany.isPending,
     isBulkApproving: bulkApprove.isPending,
     isUpdating: setStatus.isPending,
     pendingStatus: setStatus.isPending ? setStatus.variables?.status : null,
     isDeleting: remove.isPending,
-    pendingProspect: approve.isPending ? approve.variables : skip.isPending ? skip.variables : null,
+    pendingProspect: approve.isPending ? approve.variables
+      : skip.isPending ? skip.variables
+      : sendNow.isPending ? sendNow.variables?.pid : null,
+    sendingProspect: sendNow.isPending ? sendNow.variables?.pid : null,
   };
 }
 
