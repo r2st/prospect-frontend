@@ -57,7 +57,7 @@ export default function Login() {
             Sign in to your account
           </h1>
           <p className="mt-1 text-sm text-gray-500">
-            B2B lead generation for Apprend Technologies
+            B2B Lead-to-Client Platform
           </p>
         </div>
 
