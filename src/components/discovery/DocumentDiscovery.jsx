@@ -215,7 +215,7 @@ function UploadZone({ onUploaded, disabled }) {
           type="button"
           disabled={disabled || busy}
           onClick={() => inputRef.current?.click()}
-          className="mt-4 inline-flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-600 disabled:opacity-50"
+          className="mt-4 inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 disabled:opacity-50"
         >
           <FileText className="h-4 w-4" />
           Choose files

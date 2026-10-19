@@ -447,7 +447,7 @@ export default function Settings() {
           type="button"
           onClick={handleWeightsSave}
           disabled={!weightsDirty}
-          className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Save className="h-4 w-4" />
           Save Weights
@@ -686,13 +686,11 @@ export default function Settings() {
             <button
               type="button"
               onClick={() => {
-                if (window.confirm('Export all data? This may take a moment.')) {
-                  handleExportCompanies();
-                  handleExportContacts();
-                  toast.success('All data export started');
-                }
+                handleExportCompanies();
+                handleExportContacts();
+                toast.success('All data export started');
               }}
-              className="inline-flex items-center gap-2 rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 shadow-sm hover:bg-red-50"
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
             >
               <Download className="h-4 w-4" />
               Export All
@@ -957,7 +955,7 @@ export default function Settings() {
           <button
             type="button"
             onClick={handleProfileSave}
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-600"
+            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-600"
           >
             <Save className="h-4 w-4" />
             Save Profile

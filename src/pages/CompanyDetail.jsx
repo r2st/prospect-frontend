@@ -166,7 +166,7 @@ function AddContactForm({ onAdd }) {
           </div>
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setOpen(false)} className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">Cancel</button>
-            <button type="submit" className="rounded-md bg-blue-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-600">Add</button>
+            <button type="submit" className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-600">Add</button>
           </div>
         </form>
       )}
@@ -312,7 +312,7 @@ function CompanyInfoEditor({ company, onSave, saving }) {
                 type="button"
                 onClick={saveNotes}
                 disabled={saving}
-                className="inline-flex items-center gap-1 rounded-md bg-blue-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-600 disabled:opacity-50"
+                className="inline-flex items-center gap-1 rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-600 disabled:opacity-50"
               >
                 <Check className="h-3 w-3" />
                 Save
@@ -904,7 +904,7 @@ export default function CompanyDetail() {
                     type="button"
                     onClick={() => checkCompanyNews.mutate(company.id)}
                     disabled={checkCompanyNews.isPending}
-                    className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-600 disabled:opacity-50"
+                    className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 disabled:opacity-50"
                   >
                     <RefreshCw className={cn('h-4 w-4', checkCompanyNews.isPending && 'animate-spin')} />
                     {checkCompanyNews.isPending ? 'Checking...' : 'Check for News'}
@@ -1019,7 +1019,7 @@ export default function CompanyDetail() {
                     );
                   }}
                   disabled={generateEmail.isPending}
-                  className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
                 >
                   {generateEmail.isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />

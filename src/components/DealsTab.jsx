@@ -52,7 +52,7 @@ export default function DealsTab({ companyId }) {
         <button
           type="button"
           onClick={openAdd}
-          className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-blue-600"
+          className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-600"
         >
           <Plus className="h-4 w-4" />
           Add Deal

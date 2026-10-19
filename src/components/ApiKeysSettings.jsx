@@ -190,7 +190,7 @@ function ProviderKeyRow({ provider, initial }) {
           type="button"
           onClick={handleSave}
           disabled={saving || !newKey.trim()}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
         >
           {saving ? 'Saving...' : 'Save'}
         </button>
@@ -347,7 +347,7 @@ function ProgrammaticKeysSection() {
             type="button"
             onClick={handleCreate}
             disabled={!canCreate}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
           >
             <Plus className="h-4 w-4" />
             {creating ? 'Creating...' : 'Create Key'}

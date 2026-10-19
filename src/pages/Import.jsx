@@ -948,7 +948,7 @@ export default function Import() {
               type="button"
               onClick={() => setCurrentStep(2)}
               disabled={!isCompanyNameMapped}
-              className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Preview Data
               <ArrowRight className="h-4 w-4" />
@@ -1108,7 +1108,7 @@ export default function Import() {
               type="button"
               onClick={handleImport}
               disabled={!isCompanyNameMapped || importCSV.isPending}
-              className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {importCSV.isPending ? (
                 <>

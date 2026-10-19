@@ -194,7 +194,7 @@ export default function TemplateEditor({ template, onClose }) {
               type="button"
               onClick={handleSave}
               disabled={!valid || saving}
-              className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-600 disabled:opacity-50"
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 disabled:opacity-50"
             >
               {saving ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Template'}
             </button>

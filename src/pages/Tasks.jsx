@@ -166,7 +166,7 @@ function QuickAddForm({ onAdd, isAdding }) {
       <button
         type="submit"
         disabled={!title.trim() || isAdding}
-        className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-blue-500 px-3 text-sm font-medium text-white shadow-sm hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-indigo-600 px-3 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <Plus className="h-4 w-4" />
         Add
@@ -1161,7 +1161,7 @@ export default function Tasks() {
           <button
             type="button"
             onClick={openAdd}
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-600"
+            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-600"
             title="Add Task (N)"
           >
             <Plus className="h-4 w-4" />

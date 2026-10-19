@@ -1169,7 +1169,7 @@ function SequenceBuilder({ onSave, onCancel, initialData }) {
             type="button"
             onClick={handleSave}
             disabled={!name.trim() || steps.some((s) => !s.subject.trim())}
-            className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-600 disabled:opacity-50"
+            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 disabled:opacity-50"
           >
             Save Sequence
           </button>
@@ -1357,7 +1357,7 @@ export default function Sequences() {
           <button
             type="button"
             onClick={() => setShowBuilder(true)}
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-600"
+            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-600"
           >
             <Plus className="h-4 w-4" />
             Create Sequence

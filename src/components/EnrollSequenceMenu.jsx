@@ -76,7 +76,7 @@ export default function EnrollSequenceMenu({
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          'inline-flex items-center gap-1.5 rounded-lg bg-blue-500 font-medium text-white shadow-sm hover:bg-blue-600',
+          'inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 font-medium text-white shadow-sm hover:bg-indigo-600',
           sizeCls
         )}
       >

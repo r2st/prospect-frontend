@@ -43,7 +43,7 @@ function AddInteractionForm({ onAdd, saving }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-blue-600"
+        className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-600"
       >
         <Plus className="h-4 w-4" />
         Log Interaction
@@ -104,7 +104,7 @@ function AddInteractionForm({ onAdd, saving }) {
         <button type="button" onClick={() => { reset(); setOpen(false); }} className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
           Cancel
         </button>
-        <button type="submit" disabled={saving || !content.trim()} className="rounded-md bg-blue-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-600 disabled:opacity-50">
+        <button type="submit" disabled={saving || !content.trim()} className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-600 disabled:opacity-50">
           Save
         </button>
       </div>

@@ -276,7 +276,7 @@ function GroupFormModal({ group, onClose, onCreate, onUpdate }) {
             <button
               type="submit"
               disabled={!name.trim()}
-              className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-600 disabled:opacity-50"
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 disabled:opacity-50"
             >
               {isEdit ? 'Save Changes' : 'Create Group'}
             </button>
@@ -390,7 +390,7 @@ function AddCompaniesModal({ group, onClose, onAdd }) {
               type="button"
               onClick={handleAdd}
               disabled={selected.size === 0}
-              className="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-600 disabled:opacity-50"
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 disabled:opacity-50"
             >
               Add Selected ({selected.size})
             </button>
@@ -784,7 +784,7 @@ export default function Groups() {
             <button
               type="button"
               onClick={() => setShowCreateModal(true)}
-              className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-600 transition-colors"
+              className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 transition-colors"
             >
               <FolderPlus className="h-4 w-4" />
               New Group

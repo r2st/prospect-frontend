@@ -483,7 +483,7 @@ class DashboardErrorBoundary extends React.Component {
           <p className="mt-2 text-sm text-gray-600">The dashboard encountered an error. Try refreshing the page.</p>
           <button
             onClick={() => { this.setState({ hasError: false }); window.location.reload(); }}
-            className="mt-6 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            className="mt-6 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
           >
             Refresh Page
           </button>
@@ -810,7 +810,9 @@ function Dashboard() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <ChartCard title="Leads by Industry">
           {industryData.length === 0 ? (
-            <EmptyState icon={Factory} title="No industry data" description="Add companies with an industry segment to see this breakdown." />
+            <EmptyState icon={Factory} title="No industry data" description="Add companies with an industry segment to see this breakdown."
+          action={{ label: 'Import companies', href: '/import' }}
+        />
           ) : (
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={industryData} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
@@ -825,7 +827,9 @@ function Dashboard() {
 
         <ChartCard title="Email Activity (last 30 days)">
           {trendData.length === 0 ? (
-            <EmptyState icon={Mail} title="No emails sent yet" description="Compose outreach from the Email Campaigns page to see activity here." />
+            <EmptyState icon={Mail} title="No emails sent yet" description="Compose outreach from the Email Campaigns page to see activity here."
+          action={{ label: 'Start a campaign', href: '/outreach' }}
+        />
           ) : (
             <ResponsiveContainer width="100%" height={260}>
               <AreaChart data={trendData} margin={{ top: 8, right: 16, left: -16, bottom: 0 }}>
@@ -867,7 +871,9 @@ function Dashboard() {
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
           </div>
         ) : (topLeads || []).length === 0 ? (
-          <EmptyState icon={Target} title="No scored leads yet" description="Score companies to surface your best opportunities." />
+          <EmptyState icon={Target} title="No scored leads yet" description="Score companies to surface your best opportunities."
+          action={{ label: 'Import companies', href: '/import' }}
+        />
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full">

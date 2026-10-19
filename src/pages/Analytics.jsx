@@ -954,7 +954,8 @@ export default function Analytics() {
               icon={Mail}
               title="No email data yet"
               description="Send outreach emails to see activity trends here."
-            />
+          action={{ label: 'Start a campaign', href: '/outreach' }}
+        />
           ) : (
             <ResponsiveContainer width="100%" height={280}>
               <LineChart data={chartData} margin={{ top: 8, right: 16, left: -16, bottom: 0 }}>
@@ -1063,7 +1064,8 @@ export default function Analytics() {
             <EmptyState
               title="No industry data"
               description="Add companies with industry info to see this breakdown."
-            />
+          action={{ label: 'Import companies', href: '/import' }}
+        />
           ) : (
             <ResponsiveContainer width="100%" height={280}>
               <PieChart>
@@ -1103,7 +1105,8 @@ export default function Analytics() {
               icon={Users}
               title="No contact data yet"
               description="Add contacts to see growth trends here."
-            />
+          action={{ label: 'Add contacts', href: '/contacts' }}
+        />
           ) : (
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={contactGrowthData} margin={{ top: 8, right: 16, left: -16, bottom: 0 }}>
@@ -1123,7 +1126,8 @@ export default function Analytics() {
             <EmptyState
               title="No pipeline data"
               description="Move companies through stages to see conversion analytics."
-            />
+          action={{ label: 'Add companies', href: '/companies' }}
+        />
           ) : (
             <div className="space-y-3">
               {(pipelineAnalytics.conversion_rates || []).map((cr, i) => (

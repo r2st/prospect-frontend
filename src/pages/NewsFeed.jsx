@@ -203,7 +203,7 @@ export default function NewsFeed() {
             type="button"
             onClick={() => checkAll.mutate(5)}
             disabled={checkAll.isPending}
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-600 disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 disabled:opacity-50"
           >
             <RefreshCw className={cn('h-4 w-4', checkAll.isPending && 'animate-spin')} />
             {checkAll.isPending ? 'Checking...' : 'Check All Companies'}

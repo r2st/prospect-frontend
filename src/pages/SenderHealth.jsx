@@ -104,7 +104,8 @@ export default function SenderHealth() {
             icon={Gauge}
             title="No senders assessed yet"
             description="Accounts appear here once Dialtone has sent enough from them to score a reputation. Run an assessment to force a first read."
-          />
+          action={{ label: 'Connect an email account', href: '/settings' }}
+        />
         </div>
       ) : (
         <>

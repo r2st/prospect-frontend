@@ -576,6 +576,7 @@ function HealthOverview() {
           icon={HeartHandshake}
           title="No clients yet"
           description="Companies in the 'client' pipeline stage will appear here, sorted by health."
+          action={{ label: 'Add a client', href: '/clients' }}
         />
       ) : (
         <ul className="divide-y divide-gray-100">

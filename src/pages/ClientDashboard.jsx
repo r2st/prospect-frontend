@@ -176,7 +176,9 @@ export default function ClientDashboard() {
                 <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600" />
               </div>
             ) : revenueData.length === 0 ? (
-              <EmptyState icon={TrendingUp} title="No revenue data" description="Revenue trends appear once deals are recorded against clients." />
+              <EmptyState icon={TrendingUp} title="No revenue data" description="Revenue trends appear once deals are recorded against clients."
+          action={{ label: 'Add a client', href: '/clients' }}
+        />
             ) : (
               <ResponsiveContainer width="100%" height={280}>
                 <LineChart data={revenueData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
@@ -196,7 +198,9 @@ export default function ClientDashboard() {
 
         <ChartCard title="Health Distribution">
           {healthData.length === 0 ? (
-            <EmptyState icon={HeartPulse} title="No health data" description="Client health appears once scores are computed." />
+            <EmptyState icon={HeartPulse} title="No health data" description="Client health appears once scores are computed."
+          action={{ label: 'Add a client', href: '/clients' }}
+        />
           ) : (
             <>
               <ResponsiveContainer width="100%" height={220}>
@@ -227,7 +231,9 @@ export default function ClientDashboard() {
         <div className="lg:col-span-2">
           <ChartCard title="Retention Rate">
             {retentionData.length === 0 ? (
-              <EmptyState icon={TrendingUp} title="No retention data" description="Retention trends appear once client history accrues." />
+              <EmptyState icon={TrendingUp} title="No retention data" description="Retention trends appear once client history accrues."
+          action={{ label: 'Add a client', href: '/clients' }}
+        />
             ) : (
               <ResponsiveContainer width="100%" height={260}>
                 <LineChart data={retentionData} margin={{ top: 8, right: 16, left: -8, bottom: 0 }}>
@@ -297,7 +303,9 @@ export default function ClientDashboard() {
           action={<Trophy className="h-4 w-4 text-amber-500" />}
         >
           {topClients.length === 0 ? (
-            <EmptyState icon={Trophy} title="No clients yet" description="Client rankings appear once deals are recorded." />
+            <EmptyState icon={Trophy} title="No clients yet" description="Client rankings appear once deals are recorded."
+          action={{ label: 'Add a client', href: '/clients' }}
+        />
           ) : (
             <ul className="divide-y divide-gray-50">
               {topClients.map((client, i) => (

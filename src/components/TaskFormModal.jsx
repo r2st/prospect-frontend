@@ -136,7 +136,7 @@ export default function TaskFormModal({ open, onClose, onSubmit, task, companyId
             <button type="button" onClick={onClose} className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
               Cancel
             </button>
-            <button type="submit" disabled={saving} className="rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-600 disabled:opacity-50">
+            <button type="submit" disabled={saving} className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 disabled:opacity-50">
               {task ? 'Save Changes' : 'Add Task'}
             </button>
           </div>

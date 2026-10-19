@@ -108,7 +108,7 @@ function QuickAddModal({ open, onClose }) {
           </div>
           <div className="flex justify-end gap-3 border-t border-gray-100 pt-3">
             <button type="button" onClick={onClose} className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-            <button type="submit" disabled={!companyName.trim() || !email.trim() || quickAdd.isPending} className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-600 disabled:opacity-50">
+            <button type="submit" disabled={!companyName.trim() || !email.trim() || quickAdd.isPending} className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 disabled:opacity-50">
               <UserPlus className="h-4 w-4" />
               {quickAdd.isPending ? 'Adding...' : 'Add Contact'}
             </button>
@@ -158,7 +158,7 @@ function SendTestModal({ open, onClose, templateId, senderAccountId, defaultEmai
           </div>
           <div className="flex justify-end gap-3 border-t border-gray-100 pt-3">
             <button type="button" onClick={onClose} className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-            <button type="button" onClick={handleSend} disabled={!testEmail.trim() || sendTest.isPending} className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-600 disabled:opacity-50">
+            <button type="button" onClick={handleSend} disabled={!testEmail.trim() || sendTest.isPending} className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 disabled:opacity-50">
               <Send className="h-4 w-4" />
               {sendTest.isPending ? 'Sending...' : 'Send Test'}
             </button>
@@ -223,7 +223,7 @@ function SendConfirmModal({ open, onClose, onConfirm, templateName, senderEmail,
           <p className="text-xs text-gray-400">This action cannot be undone. Emails will be sent to all selected contacts.</p>
           <div className="flex justify-end gap-3 border-t border-gray-100 pt-3">
             <button type="button" onClick={onClose} className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-            <button type="button" onClick={onConfirm} className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-600">
+            <button type="button" onClick={onConfirm} className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-600">
               <Send className="h-4 w-4" />
               Confirm Send
             </button>
@@ -607,7 +607,7 @@ export default function ComposeTab() {
               type="button"
               onClick={handleSend}
               disabled={!selectedIds.length || !templateId || compose.isPending || (scheduleMode === 'later' && !scheduledAt)}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-600 disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 disabled:opacity-50"
             >
               {scheduleMode === 'later' ? <Calendar className="h-4 w-4" /> : <Send className="h-4 w-4" />}
               {compose.isPending ? 'Sending...' : scheduleMode === 'later' ? `Schedule ${selectedIds.length}` : `Send to ${selectedIds.length}`}
@@ -628,7 +628,7 @@ export default function ComposeTab() {
                   </select>
                   <div className="flex gap-2">
                     <button type="button" onClick={() => setEnrollSequenceOpen(false)} className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-                    <button type="button" onClick={handleEnrollInSequence} disabled={!selectedSequenceId || enrollBatch.isPending} className="flex-1 rounded-lg bg-blue-500 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-blue-600 disabled:opacity-50">
+                    <button type="button" onClick={handleEnrollInSequence} disabled={!selectedSequenceId || enrollBatch.isPending} className="flex-1 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-indigo-600 disabled:opacity-50">
                       {enrollBatch.isPending ? 'Enrolling...' : `Enroll ${selectedIds.length}`}
                     </button>
                   </div>
@@ -735,7 +735,9 @@ export default function ComposeTab() {
             <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-blue-600" />
           </div>
         ) : filtered.length === 0 ? (
-          <EmptyState title="No contacts found" description="Try a different search." icon={Users} />
+          <EmptyState title="No contacts found" description="Try a different search." icon={Users}
+          action={{ label: 'Import contacts', href: '/import' }}
+        />
         ) : (
           <div className="max-h-[28rem] overflow-auto">
             <table className="w-full min-w-[640px] text-sm">

@@ -408,7 +408,7 @@ function QuickCreateForm() {
       <button
         type="submit"
         disabled={createFollowUp.isPending}
-        className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-blue-600 px-3 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+        className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-indigo-600 px-3 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
       >
         <Plus className="h-3.5 w-3.5" />
         Add

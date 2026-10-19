@@ -827,7 +827,7 @@ export default function CompanySearch() {
               <button
                 type="submit"
                 disabled={isPending || geminiKeyMissing}
-                className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-600 disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 disabled:opacity-50"
               >
                 {isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin" />

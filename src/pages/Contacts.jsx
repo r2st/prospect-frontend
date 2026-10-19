@@ -334,7 +334,7 @@ function QuickAddForm({ onClose }) {
       </div>
       <div className="mt-3 flex items-center justify-end gap-2">
         <button type="button" onClick={onClose} className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-        <button type="submit" disabled={quickAdd.isPending} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700 disabled:opacity-50">
+        <button type="submit" disabled={quickAdd.isPending} className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50">
           <Check className="h-3.5 w-3.5" />
           {quickAdd.isPending ? 'Adding...' : 'Add Contact'}
         </button>
@@ -442,7 +442,7 @@ export function AddToCampaignModal({ contactIds, onClose, onDone }) {
             type="button"
             onClick={submit}
             disabled={!chosen || add.isPending}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
           >
             {add.isPending ? 'Adding…' : 'Add to campaign'}
           </button>
@@ -1316,7 +1316,7 @@ export default function Contacts() {
           </button>
           <Link
             to="/scan"
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700"
+            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700"
           >
             <ScanLine className="h-4 w-4" />
             Scan a Card

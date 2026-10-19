@@ -66,7 +66,9 @@ function LeadQualityCard({ report }) {
   return (
     <ChartCard title="Lead Quality" icon={GraduationCap}>
       {total === 0 ? (
-        <EmptyState icon={GraduationCap} title="No scored leads yet" description="Grades appear once Autopilot scores your leads." />
+        <EmptyState icon={GraduationCap} title="No scored leads yet" description="Grades appear once Autopilot scores your leads."
+          action={{ label: 'Import companies', href: '/import' }}
+        />
       ) : (
         <div className="space-y-4">
           <p className="text-xs text-gray-400">Graded by Dialtone</p>
@@ -476,7 +478,9 @@ export default function Reports() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <ChartCard title="Client Retention" icon={TrendingUp} onExport={retentionData.length > 0 ? exportRetention : undefined}>
           {retentionData.length === 0 ? (
-            <EmptyState icon={TrendingUp} title="No retention data" description="Retention appears once client history accrues." />
+            <EmptyState icon={TrendingUp} title="No retention data" description="Retention appears once client history accrues."
+          action={{ label: 'Add a client', href: '/clients' }}
+        />
           ) : (
             <ResponsiveContainer width="100%" height={260}>
               <LineChart data={retentionData} margin={{ top: 8, right: 16, left: -8, bottom: 0 }}>
@@ -493,7 +497,9 @@ export default function Reports() {
 
         <ChartCard title="Revenue Pipeline Funnel" icon={BarChart3} onExport={funnelData.length > 0 ? exportFunnel : undefined}>
           {funnelData.length === 0 ? (
-            <EmptyState icon={BarChart3} title="No pipeline data" description="The funnel appears once deals are recorded by stage." />
+            <EmptyState icon={BarChart3} title="No pipeline data" description="The funnel appears once deals are recorded by stage."
+          action={{ label: 'Add companies', href: '/companies' }}
+        />
           ) : (
             <div className="py-2">
               <RevenueFunnel data={funnelData} />
@@ -549,7 +555,9 @@ export default function Reports() {
 
       <ChartCard title="Activity Heatmap" icon={Activity} onExport={heatmap.length > 0 ? exportHeatmap : undefined}>
         {heatmap.length === 0 ? (
-          <EmptyState icon={Activity} title="No activity data" description="Activity appears once interactions and outreach are logged." />
+          <EmptyState icon={Activity} title="No activity data" description="Activity appears once interactions and outreach are logged."
+          action={{ label: 'Start a campaign', href: '/outreach' }}
+        />
         ) : (
           <ActivityHeatmap data={heatmap} />
         )}
@@ -563,7 +571,9 @@ export default function Reports() {
           </h2>
         </div>
         {topClients.length === 0 ? (
-          <EmptyState icon={Trophy} title="No client revenue yet" description="Top clients appear once revenue is recorded." />
+          <EmptyState icon={Trophy} title="No client revenue yet" description="Top clients appear once revenue is recorded."
+          action={{ label: 'Add a client', href: '/clients' }}
+        />
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-100">

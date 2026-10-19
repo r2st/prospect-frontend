@@ -697,14 +697,6 @@ export default function Layout({ children }) {
               <kbd className="rounded border border-gray-200 bg-white px-1.5 py-0.5 text-[11px] font-medium text-gray-400">⌘K</kbd>
             </button>
             <Link
-              to="/help"
-              className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
-              aria-label="Help Center"
-              title="Help Center"
-            >
-              <LifeBuoy className="h-5 w-5" />
-            </Link>
-            <Link
               to="/inbox"
               className="relative rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
               aria-label={inboxUnread > 0 ? `${inboxUnread} conversations need a reply` : 'Email inbox'}
@@ -725,7 +717,7 @@ export default function Layout({ children }) {
         <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
           {children}
         </div>
-        <DoAideFooter className="mx-auto max-w-7xl border-t border-gray-200 px-4 py-6 sm:px-6 lg:px-8" />
+        <DoAideFooter compact className="mx-auto max-w-7xl border-t border-gray-200 px-4 py-6 sm:px-6 lg:px-8" />
       </main>
 
       <FeedbackWidget pageName={currentPage ? currentPage.name : pageNameFromPath(location.pathname)} />

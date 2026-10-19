@@ -192,7 +192,7 @@ function SignatureForm({ signature, onClose }) {
           type="button"
           onClick={handleSave}
           disabled={!valid || saving}
-          className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-600 disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 disabled:opacity-50"
         >
           {saving ? (
             <>
@@ -307,7 +307,7 @@ export default function EmailSignatureEditor() {
           <button
             type="button"
             onClick={() => setEditing('new')}
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-600"
+            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-600"
           >
             <Plus className="h-4 w-4" />
             Add Signature
@@ -346,7 +346,7 @@ export default function EmailSignatureEditor() {
               <button
                 type="button"
                 onClick={() => setEditing('new')}
-                className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-blue-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-600"
+                className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-600"
               >
                 <Plus className="h-3.5 w-3.5" />
                 Create Signature

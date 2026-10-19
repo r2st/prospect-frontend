@@ -168,7 +168,7 @@ function AddCompanyModal({ open, onClose, onCreate }) {
             </button>
             <button
               type="submit"
-              className="rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-600"
+              className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-600"
             >
               Add Company
             </button>
@@ -183,7 +183,7 @@ function ConfirmModal({ open, onClose, onConfirm, title, message, confirmLabel =
   if (!open) return null;
   const btnColors = {
     red: 'bg-red-600 hover:bg-red-700 text-white',
-    blue: 'bg-blue-500 hover:bg-blue-600 text-white',
+    blue: 'bg-indigo-600 hover:bg-indigo-600 text-white',
   };
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -357,7 +357,7 @@ function BulkActionBar({ selectedIds, onDeselect, onStageChange, onAddToGroup, o
                 <button
                   type="button"
                   onClick={submitTag}
-                  className="rounded-md bg-blue-500 px-2.5 py-1.5 text-sm font-medium text-white hover:bg-blue-600"
+                  className="rounded-md bg-indigo-600 px-2.5 py-1.5 text-sm font-medium text-white hover:bg-indigo-600"
                 >
                   Add
                 </button>
@@ -914,7 +914,7 @@ export default function Companies() {
           <button
             type="button"
             onClick={() => setShowModal(true)}
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-600"
+            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-600"
           >
             <Plus className="h-4 w-4" />
             Add Company

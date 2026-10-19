@@ -1655,7 +1655,8 @@ export default function Inbox() {
                           ? 'No threads match this filter.'
                           : 'Email conversations will appear here once synced from Gmail.'
                 }
-              />
+          action={{ label: 'Connect an email account', href: '/settings' }}
+        />
             ) : (
               <>
                 <div className="mb-2 flex items-center gap-2 px-1">

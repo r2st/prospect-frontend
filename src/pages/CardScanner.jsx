@@ -808,7 +808,7 @@ export default function CardScanner() {
               className={cn(
                 'inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition',
                 batchMode
-                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                  ? 'bg-indigo-600 text-white hover:bg-indigo-700'
                   : 'border border-gray-300 bg-white text-gray-600 hover:bg-gray-50'
               )}
             >
@@ -834,7 +834,7 @@ export default function CardScanner() {
                 <button
                   onClick={handleScan}
                   disabled={scanCard.isPending}
-                  className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed transition"
+                  className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed transition"
                 >
                   {scanCard.isPending ? (
                     <>
@@ -925,7 +925,7 @@ export default function CardScanner() {
               <div className="mt-4 space-y-3">
                 <button
                   onClick={handleReset}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700"
                 >
                   <ScanLine className="h-4 w-4" />
                   Scan next card

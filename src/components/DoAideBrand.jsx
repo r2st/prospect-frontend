@@ -35,9 +35,12 @@ export function DoAideBadge({ className }) {
 }
 
 /** The shared DoAide footer: sibling products, the badge, and the copyright. */
-export function DoAideFooter({ className }) {
+// `compact` drops the sibling-product row for in-app pages; sign-in and signup
+// keep the full row.
+export function DoAideFooter({ className, compact = false }) {
   return (
     <footer className={cn('text-center', className)} data-testid="doaide-footer">
+      {!compact && (
       <nav aria-label="DoAide products" className="flex flex-wrap justify-center gap-x-4 gap-y-1.5 text-xs">
         {DOAIDE_PRODUCTS.map((p) =>
           p.current ? (
@@ -49,7 +52,8 @@ export function DoAideFooter({ className }) {
           )
         )}
       </nav>
-      <div className="mt-3 flex flex-wrap items-center justify-center gap-3">
+      )}
+      <div className={cn('flex flex-wrap items-center justify-center gap-3', !compact && 'mt-3')}>
         <DoAideBadge />
         <span className="text-[11px] text-gray-400">© {new Date().getFullYear()} DoAide</span>
       </div>

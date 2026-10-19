@@ -144,7 +144,7 @@ export default function DocumentReview({ doc, canContinue, onContinue }) {
             type="button"
             disabled={!candidateIds.length || importMutation.isPending}
             onClick={runImport}
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-600 disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 disabled:opacity-50"
           >
             {importMutation.isPending && (
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />

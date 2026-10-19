@@ -238,7 +238,9 @@ export default function DailyActivity() {
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <ChartCard title="Today's emails by sequence step" icon={Mail}>
               {stageRows.length === 0 ? (
-                <EmptyState icon={Mail} title="No emails sent today" description="Sends broken out by sequence step will appear here." />
+                <EmptyState icon={Mail} title="No emails sent today" description="Sends broken out by sequence step will appear here."
+          action={{ label: 'Start a campaign', href: '/outreach' }}
+        />
               ) : (
                 <ResponsiveContainer width="100%" height={220}>
                   <BarChart data={stageRows} margin={{ top: 8, right: 16, left: -8, bottom: 0 }}>

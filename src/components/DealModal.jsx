@@ -195,7 +195,7 @@ export default function DealModal({ open, onClose, onSubmit, deal, companyId, sa
             <button
               type="submit"
               disabled={saving || (!effectiveCompanyId && !deal)}
-              className="rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-600 disabled:opacity-50"
+              className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 disabled:opacity-50"
             >
               {deal ? 'Save Changes' : 'Add Deal'}
             </button>

@@ -230,7 +230,7 @@ export default function ContactDetailModal({ contactId, initial, onClose, embedd
             </div>
             <div className="flex justify-end gap-2 pt-1">
               <button onClick={() => setEditing(false)} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-              <button onClick={() => saveEdit.mutate()} disabled={saveEdit.isPending} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60">
+              <button onClick={() => saveEdit.mutate()} disabled={saveEdit.isPending} className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60">
                 <Check className="h-4 w-4" />{saveEdit.isPending ? 'Saving...' : 'Save changes'}
               </button>
             </div>
@@ -253,7 +253,7 @@ export default function ContactDetailModal({ contactId, initial, onClose, embedd
                       <textarea value={notesDraft} onChange={(e) => setNotesDraft(e.target.value)} rows={3} autoFocus placeholder="Add a note..." className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
                       <div className="flex justify-end gap-2">
                         <button type="button" onClick={() => { setNotesDraft(c.notes || ''); setEditingNotes(false); }} className="rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-                        <button type="button" onClick={() => saveNotes.mutate(notesDraft)} disabled={saveNotes.isPending} className="inline-flex items-center gap-1 rounded-md bg-blue-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-600 disabled:opacity-50"><Check className="h-3 w-3" />Save</button>
+                        <button type="button" onClick={() => saveNotes.mutate(notesDraft)} disabled={saveNotes.isPending} className="inline-flex items-center gap-1 rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-600 disabled:opacity-50"><Check className="h-3 w-3" />Save</button>
                       </div>
                     </div>
                   ) : (
@@ -368,7 +368,7 @@ export default function ContactDetailModal({ contactId, initial, onClose, embedd
               <button
                 onClick={() => saveEdit.mutate()}
                 disabled={saveEdit.isPending}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
               >
                 <Check className="h-4 w-4" />
                 {saveEdit.isPending ? 'Saving…' : 'Save changes'}
@@ -481,7 +481,7 @@ export default function ContactDetailModal({ contactId, initial, onClose, embedd
                           type="button"
                           onClick={() => saveNotes.mutate(notesDraft)}
                           disabled={saveNotes.isPending}
-                          className="inline-flex items-center gap-1 rounded-md bg-blue-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-600 disabled:opacity-50"
+                          className="inline-flex items-center gap-1 rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-600 disabled:opacity-50"
                         >
                           <Check className="h-3 w-3" />
                           Save

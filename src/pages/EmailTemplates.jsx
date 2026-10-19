@@ -135,7 +135,6 @@ export default function EmailTemplates() {
   const hasUnsaved = dirty || pendingFiles.length > 0;
 
   const selectTemplate = (template) => {
-    if (hasUnsaved && !window.confirm('Discard unsaved changes?')) return;
     setSelectedId(template.id);
     setDraft(null);
     setDirty(false);
@@ -144,7 +143,6 @@ export default function EmailTemplates() {
   };
 
   const startNew = () => {
-    if (hasUnsaved && !window.confirm('Discard unsaved changes?')) return;
     setSelectedId('new');
     setDraft(BLANK);
     setDirty(false);
@@ -287,7 +285,7 @@ export default function EmailTemplates() {
         <button
           type="button"
           onClick={startNew}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
         >
           <Plus className="h-4 w-4" />
           New template
@@ -306,6 +304,7 @@ export default function EmailTemplates() {
                   icon={FileText}
                   title="No templates yet"
                   description="Create one to reuse copy across sends."
+                  action={{ label: 'Create your first template', onClick: startNew }}
                 />
               </div>
             ) : (
@@ -432,7 +431,7 @@ export default function EmailTemplates() {
                   type="button"
                   onClick={save}
                   disabled={saving || !dirty}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <Save className="h-4 w-4" />
                   {isNew ? 'Create' : 'Save changes'}
