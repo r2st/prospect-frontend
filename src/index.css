@@ -7,8 +7,16 @@
   --brand-hover: #3730a3;
 }
 
+/* Page and text colours follow the themed gray scale (see tailwind.config.js). */
 html {
-  background-color: #f9fafb;
+  background-color: rgb(var(--c-gray-50));
+  color-scheme: light;
+}
+html.dark {
+  color-scheme: dark;
+}
+html.dark ::selection {
+  background-color: rgba(129, 140, 248, 0.3);
 }
 
 body {
@@ -16,7 +24,7 @@ body {
   -webkit-text-size-adjust: 100%;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  color: #111827;
+  color: rgb(var(--c-gray-900));
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
 
@@ -35,7 +43,7 @@ body {
 /* Refined, unobtrusive scrollbars */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #cbd5e1 transparent;
+  scrollbar-color: rgb(var(--c-gray-300)) transparent;
 }
 *::-webkit-scrollbar {
   width: 10px;
@@ -45,13 +53,13 @@ body {
   background: transparent;
 }
 *::-webkit-scrollbar-thumb {
-  background-color: #cbd5e1;
+  background-color: rgb(var(--c-gray-300));
   border: 2px solid transparent;
   background-clip: content-box;
   border-radius: 9999px;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background-color: #94a3b8;
+  background-color: rgb(var(--c-gray-400));
 }
 
 /*

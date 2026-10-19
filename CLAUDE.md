@@ -73,6 +73,17 @@ Key`), not just `Set`. Nine of them share the page, so the visible label alone
 identifies none of them to a screen reader — or to a test, which is how the
 first version of `PlatformCredentials.test.jsx` failed.
 
+## Theming (System / Light / Dark)
+The toggle sits in the sidebar footer and on the sign-in page; the choice is
+`localStorage['prospect-theme']` and the resolved theme is `html.dark`. Pages
+are written in plain light utilities — **don't add `dark:` twins**. Instead
+`tailwind.config.js` makes the gray scale and the 50/100/200 tints CSS
+variables that flip under `.dark`, and lifts deep text shades (700–900).
+Consequences: `bg-gray-900` is not "always dark" (it's overridden to a dark
+chip); a surface that must stay dark in both themes (the sign-in hero) uses
+fixed hex + `white/…` alphas, never grays. `public/theme-init.js` applies the
+theme before paint — external because the CSP is `script-src 'self'`.
+
 ## Key Patterns
 - Pipeline stages shown as kanban: New Lead → Researching → Outreach → Engaged → Negotiating → Client → Churned
 - Health badges: green (healthy), yellow (at_risk), red (churned)

@@ -53,7 +53,6 @@ const InvestorDetail = lazy(() => import('./pages/InvestorDetail'));
 const SentimentDashboard = lazy(() => import('./pages/SentimentDashboard'));
 const DealAgent = lazy(() => import('./pages/DealAgent'));
 const Login = lazy(() => import('./pages/Login'));
-const Register = lazy(() => import('./pages/Register'));
 const ChangePassword = lazy(() => import('./pages/ChangePassword'));
 const AdminUsers = lazy(() => import('./pages/AdminUsers'));
 const AdminFeedback = lazy(() => import('./pages/AdminFeedback'));
@@ -112,7 +111,8 @@ export default function App() {
       <Routes>
         {/* Public / auth routes — rendered without the app layout. */}
         <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+        {/* Sign-up is the "Create account" tab of the sign-in landing page. */}
+        <Route path="/register" element={<Login key="signup" initialMode="signup" />} />
         <Route
           path="/change-password"
           element={

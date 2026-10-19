@@ -21,6 +21,7 @@ import OrgSwitcher from './OrgSwitcher';
 import ImpersonationBanner from './ImpersonationBanner';
 import Logo, { LogoMark } from './Logo';
 import { DoAideFooter } from './DoAideBrand';
+import ThemeToggle from './ThemeToggle';
 import FeedbackWidget, { pageNameFromPath } from './FeedbackWidget';
 import {
   heroNav,
@@ -245,8 +246,9 @@ export default function Layout({ children }) {
           </div>
         </div>
 
-        <div className="px-3 pb-0.5 pt-1">
-          <div className="text-[11px] font-medium text-gray-400">DoAide Prospect v1.0 &middot; B2B Lead Gen</div>
+        <div className="flex items-center justify-between gap-2 px-3 pb-0.5 pt-1">
+          <div className="min-w-0 truncate text-[11px] font-medium text-gray-400">DoAide Prospect v1.0</div>
+          <ThemeToggle />
         </div>
       </div>
     </>

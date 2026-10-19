@@ -12,6 +12,13 @@ describe('DoAide branding', () => {
     expect(screen.getByText('Prospect').tagName).toBe('EM');
   });
 
+  it('draws the eyes light so they show against the indigo face', () => {
+    const { container } = render(<Logo />);
+    const eyes = container.querySelectorAll('[data-part="eye"]');
+    expect(eyes).toHaveLength(2);
+    for (const eye of eyes) expect(eye).toHaveAttribute('fill', '#FFFFFF');
+  });
+
   it('links the "A DoAide Product" badge to doaide.com', () => {
     render(<DoAideBadge />);
     const badge = screen.getByRole('link', { name: 'A DoAide Product' });
