@@ -12,6 +12,27 @@ const PRESETS = {
   zoho: { label: 'Zoho', host: 'smtp.zoho.com', port: 465, use_tls: false, use_ssl: true },
 };
 
+// Mailbox domain -> preset, so typing an address is usually all the setup needed.
+const DOMAIN_PRESETS = {
+  'gmail.com': 'gmail',
+  'googlemail.com': 'gmail',
+  'outlook.com': 'outlook',
+  'hotmail.com': 'outlook',
+  'live.com': 'outlook',
+  'yahoo.com': 'yahoo',
+  'ymail.com': 'yahoo',
+  'zoho.com': 'zoho',
+};
+
+function detectFromEmail(email) {
+  const domain = (email.split('@')[1] || '').trim().toLowerCase();
+  if (!domain.includes('.')) return null;
+  const key = DOMAIN_PRESETS[domain];
+  if (key) return { key, ...PRESETS[key] };
+  // Unknown domain: smtp.<domain> is right far more often than not.
+  return { key: 'custom', host: `smtp.${domain}`, port: 587, use_tls: true, use_ssl: false };
+}
+
 const EMPTY = {
   email: '',
   display_name: '',
@@ -40,8 +61,9 @@ export default function SmtpAccountModal({ open, onClose, account }) {
   const isEdit = Boolean(account);
   const add = useAddSmtp();
   const update = useUpdateSmtp();
-  const [preset, setPreset] = useState('custom');
   const [form, setForm] = useState(EMPTY);
+  const [advanced, setAdvanced] = useState(false);
+  const [detected, setDetected] = useState('');
 
   useEffect(() => {
     if (!open) return;
@@ -59,25 +81,37 @@ export default function SmtpAccountModal({ open, onClose, account }) {
     } else {
       setForm(EMPTY);
     }
-    setPreset('custom');
+    setAdvanced(Boolean(account));
+    setDetected('');
   }, [open, account]);
 
   if (!open) return null;
 
   const set = (patch) => setForm((prev) => ({ ...prev, ...patch }));
 
-  const applyPreset = (key) => {
-    setPreset(key);
-    const p = PRESETS[key];
-    if (p && key !== 'custom') {
-      set({ host: p.host, port: p.port, use_tls: p.use_tls, use_ssl: p.use_ssl });
-    }
+  // Fill server settings from the address once it's typed, unless the user has
+  // already set a host themselves.
+  const onEmailBlur = () => {
+    if (isEdit) return;
+    const d = detectFromEmail(form.email);
+    if (!d || (form.host && form.host !== detected)) return;
+    set({ host: d.host, port: d.port, use_tls: d.use_tls, use_ssl: d.use_ssl });
+    setDetected(d.host);
+    // A guessed host for a custom domain deserves a look; known providers don't.
+    if (d.key === 'custom') setAdvanced(true);
   };
-
   const busy = add.isPending || update.isPending;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Server settings stay collapsed unless detection missed; if the host is
+    // still empty, open them rather than sending a doomed request.
+    if (!form.host.trim()) {
+      const d = detectFromEmail(form.email);
+      if (d) set({ host: d.host, port: d.port, use_tls: d.use_tls, use_ssl: d.use_ssl });
+      setAdvanced(true);
+      return;
+    }
     const payload = {
       email: form.email.trim(),
       display_name: form.display_name.trim() || null,
@@ -119,38 +153,17 @@ export default function SmtpAccountModal({ open, onClose, account }) {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 px-6 py-5">
-          {!isEdit && (
-            <Field label="Provider preset" hint="Pick a provider to auto-fill server settings, or choose Custom.">
-              <select value={preset} onChange={(e) => applyPreset(e.target.value)} className={inputCls}>
-                {Object.entries(PRESETS).map(([key, p]) => (
-                  <option key={key} value={key}>{p.label}</option>
-                ))}
-              </select>
-            </Field>
-          )}
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="From email">
-              <input type="email" required value={form.email} onChange={(e) => set({ email: e.target.value })} placeholder="you@company.com" className={inputCls} />
-            </Field>
-            <Field label="Display name" hint="Optional">
-              <input type="text" value={form.display_name} onChange={(e) => set({ display_name: e.target.value })} placeholder="Sales Team" className={inputCls} />
-            </Field>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div className="sm:col-span-2">
-              <Field label="SMTP host">
-                <input type="text" required value={form.host} onChange={(e) => set({ host: e.target.value })} placeholder="smtp.company.com" className={inputCls} />
-              </Field>
-            </div>
-            <Field label="Port">
-              <input type="number" required value={form.port} onChange={(e) => set({ port: e.target.value })} className={inputCls} />
-            </Field>
-          </div>
-
-          <Field label="Username" hint="Usually your full email address.">
-            <input type="text" value={form.username} onChange={(e) => set({ username: e.target.value })} placeholder="you@company.com" className={inputCls} />
+          <Field label="Email">
+            <input
+              type="email"
+              required
+              autoFocus
+              value={form.email}
+              onChange={(e) => set({ email: e.target.value })}
+              onBlur={onEmailBlur}
+              placeholder="you@company.com"
+              className={inputCls}
+            />
           </Field>
 
           <Field
@@ -168,28 +181,60 @@ export default function SmtpAccountModal({ open, onClose, account }) {
             />
           </Field>
 
-          <Field label="Encryption">
-            <div className="flex gap-4 text-sm">
-              <label className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="encryption"
-                  checked={form.use_tls && !form.use_ssl}
-                  onChange={() => set({ use_tls: true, use_ssl: false })}
-                />
-                STARTTLS (port 587)
-              </label>
-              <label className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="encryption"
-                  checked={form.use_ssl}
-                  onChange={() => set({ use_tls: false, use_ssl: true })}
-                />
-                SSL/TLS (port 465)
-              </label>
+          <button
+            type="button"
+            onClick={() => setAdvanced((v) => !v)}
+            aria-expanded={advanced}
+            className="text-sm font-medium text-blue-600 hover:text-blue-700"
+          >
+            {advanced ? 'Hide server settings' : 'Server settings'}
+          </button>
+
+          {advanced && (
+            <div className="space-y-4 rounded-lg border border-gray-100 bg-gray-50 p-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div className="sm:col-span-2">
+                  <Field label="SMTP host">
+                    <input type="text" required value={form.host} onChange={(e) => set({ host: e.target.value })} placeholder="smtp.company.com" className={inputCls} />
+                  </Field>
+                </div>
+                <Field label="Port">
+                  <input type="number" required value={form.port} onChange={(e) => set({ port: e.target.value })} className={inputCls} />
+                </Field>
+              </div>
+
+              <Field label="Username" hint="Defaults to your email address.">
+                <input type="text" value={form.username} onChange={(e) => set({ username: e.target.value })} placeholder={form.email || 'you@company.com'} className={inputCls} />
+              </Field>
+
+              <Field label="Display name" hint="Optional">
+                <input type="text" value={form.display_name} onChange={(e) => set({ display_name: e.target.value })} placeholder="Sales Team" className={inputCls} />
+              </Field>
+
+              <Field label="Encryption">
+                <div className="flex gap-4 text-sm">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="encryption"
+                      checked={form.use_tls && !form.use_ssl}
+                      onChange={() => set({ use_tls: true, use_ssl: false, port: 587 })}
+                    />
+                    STARTTLS (587)
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="encryption"
+                      checked={form.use_ssl}
+                      onChange={() => set({ use_tls: false, use_ssl: true, port: 465 })}
+                    />
+                    SSL/TLS (465)
+                  </label>
+                </div>
+              </Field>
             </div>
-          </Field>
+          )}
 
           <div className="flex items-center justify-end gap-3 border-t border-gray-100 pt-4">
             <button type="button" onClick={onClose} className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">

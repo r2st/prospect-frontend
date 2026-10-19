@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Settings as SettingsIcon,
-  Globe,
   Target,
   Download,
   AlertCircle,
@@ -16,7 +15,6 @@ import {
   Building2,
   Users,
   Mail,
-  Pen,
   Bell,
   Database,
   User,
@@ -40,7 +38,6 @@ import { useAuth } from '../context/AuthContext';
 import { isOrgAdmin, isPlatformAdmin } from '../lib/roles';
 import { api } from '../api/client';
 import { useAutomation } from '../hooks/useAutomation';
-import { API_BASE_URL } from '../lib/constants';
 import { cn } from '../lib/utils';
 import toast from 'react-hot-toast';
 
@@ -113,7 +110,6 @@ function getTimezones() {
 const TABS = [
   { id: 'profile', label: 'Profile', icon: User },
   { id: 'email', label: 'Email Accounts', icon: Mail },
-  { id: 'signatures', label: 'Signatures', icon: Pen },
   { id: 'scoring', label: 'Scoring', icon: Target },
   { id: 'notifications', label: 'Notifications', icon: Bell },
   { id: 'data', label: 'Data', icon: Download },
@@ -124,15 +120,6 @@ const TABS = [
 ];
 
 /* ---------- sub-components ---------- */
-
-function ConnectionStatus({ connected }) {
-  return (
-    <span className={`inline-flex items-center gap-1.5 text-sm font-medium ${connected ? 'text-green-600' : 'text-red-600'}`}>
-      <span className={`h-2.5 w-2.5 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`} />
-      {connected ? 'Connected' : 'Unavailable'}
-    </span>
-  );
-}
 
 function WeightSlider({ label, value, description, onChange }) {
   return (
@@ -233,6 +220,7 @@ export default function Settings() {
   // Deep link from Discovery's "add your Gemini key" banner: /settings#api-keys
   const [activeTab, setActiveTab] = useState(() => {
     const hashTab = window.location.hash.slice(1);
+    if (hashTab === 'signatures') return 'email';
     return TABS.some((t) => t.id === hashTab) ? hashTab : 'profile';
   });
 
@@ -409,11 +397,10 @@ export default function Settings() {
   /* ---------- tab content renderers ---------- */
 
   const renderEmailTab = () => (
-    <GmailConnect />
-  );
-
-  const renderSignaturesTab = () => (
-    <EmailSignatureEditor />
+    <div className="space-y-6">
+      <GmailConnect />
+      <EmailSignatureEditor />
+    </div>
   );
 
   const renderScoringTab = () => (
@@ -764,53 +751,6 @@ export default function Settings() {
       {/* Test deliverability — compliant test send + SPF/DKIM/DMARC posture. */}
       <TestDeliverability />
 
-      {/* API Configuration */}
-      <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-        <div className="mb-4 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100">
-            <Globe className="h-5 w-5 text-gray-600" />
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">API Configuration</h2>
-            <p className="text-sm text-gray-500">Backend API connection settings</p>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Base URL</label>
-            <input
-              type="text"
-              readOnly
-              value={API_BASE_URL}
-              className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-600"
-            />
-          </div>
-          <div className="flex items-center justify-between rounded-lg bg-gray-50 px-4 py-3">
-            <span className="text-sm text-gray-700">Connection Status</span>
-            {checking ? (
-              <span className="inline-flex items-center gap-1.5 text-sm text-gray-500">
-                <div className="h-2.5 w-2.5 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
-                Checking...
-              </span>
-            ) : (
-              <ConnectionStatus connected={apiConnected} />
-            )}
-          </div>
-          {!checking && !apiConnected && (
-            <div className="flex items-start gap-2 rounded-lg bg-yellow-50 px-4 py-3 text-sm text-yellow-700">
-              <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
-              <div>
-                <p className="font-medium">API not reachable</p>
-                <p className="mt-0.5 text-yellow-600">
-                  The app is running in demo mode with mock data. Start the backend server at {API_BASE_URL} to connect to live data.
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* System Status */}
       {!checking && apiConnected && healthData && (
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -1030,7 +970,6 @@ export default function Settings() {
   const tabContent = {
     profile: renderProfileTab,
     email: renderEmailTab,
-    signatures: renderSignaturesTab,
     scoring: renderScoringTab,
     notifications: renderNotificationsTab,
     data: renderDataTab,

@@ -79,6 +79,9 @@ import FeedbackWidget, { pageNameFromPath } from './FeedbackWidget';
 // triages and can halt itself, and its surfaces were previously scattered
 // across three unrelated groups — so "what is the agent doing, and is it OK?"
 // had no single place to answer it.
+// Items flagged `advanced` sit behind a per-section "More" toggle so the
+// everyday pages stay visible; the section that owns the current route opens
+// itself.
 const navSections = [
   {
     key: 'workspace',
@@ -88,7 +91,7 @@ const navSections = [
       { name: 'Pipeline', href: '/pipeline', icon: GitBranch },
       { name: 'Tasks', href: '/tasks', icon: CheckSquare },
       { name: 'Analytics', href: '/analytics', icon: BarChart3 },
-      { name: 'Daily Activity', href: '/daily-activity', icon: Activity },
+      { advanced: true, name: 'Daily Activity', href: '/daily-activity', icon: Activity },
     ],
   },
   {
@@ -98,19 +101,19 @@ const navSections = [
       { name: 'Console', href: '/dialtone', icon: Radio, end: true },
       { name: 'Replies', href: '/dialtone/inbox', icon: MailCheck },
       { name: 'AI Drafts', href: '/dialtone/drafts', icon: PenLine },
-      { name: 'Templates', href: '/dialtone/templates', icon: FileText },
+      { advanced: true, name: 'Templates', href: '/dialtone/templates', icon: FileText },
       { name: 'Campaigns', href: '/dialtone/campaigns', icon: BarChart3 },
-      { name: 'A/B Tests', href: '/dialtone/ab-tests', icon: Beaker },
-      { name: 'Send Timing', href: '/dialtone/send-timing', icon: Clock },
-      { name: 'Policies', href: '/dialtone/policies', icon: SlidersHorizontal },
+      { advanced: true, name: 'A/B Tests', href: '/dialtone/ab-tests', icon: Beaker },
+      { advanced: true, name: 'Send Timing', href: '/dialtone/send-timing', icon: Clock },
+      { advanced: true, name: 'Policies', href: '/dialtone/policies', icon: SlidersHorizontal },
       { name: 'Prospecting', href: '/prospecting', icon: Radar },
-      { name: 'Social Listening', href: '/agents/social-listening', icon: Ear },
-      { name: 'ICP', href: '/dialtone/icp', icon: Target },
-      { name: 'Places Discovery', href: '/dialtone/discovery', icon: MapPin },
-      { name: 'Health', href: '/dialtone/health', icon: Stethoscope },
-      { name: 'Senders', href: '/dialtone/senders', icon: Gauge },
-      { name: 'Suppression', href: '/dialtone/suppression', icon: ShieldOff },
-      { name: 'Domains', href: '/deliverability/domains', icon: Globe },
+      { advanced: true, name: 'Social Listening', href: '/agents/social-listening', icon: Ear },
+      { advanced: true, name: 'ICP', href: '/dialtone/icp', icon: Target },
+      { advanced: true, name: 'Places Discovery', href: '/dialtone/discovery', icon: MapPin },
+      { advanced: true, name: 'Health', href: '/dialtone/health', icon: Stethoscope },
+      { advanced: true, name: 'Senders', href: '/dialtone/senders', icon: Gauge },
+      { advanced: true, name: 'Suppression', href: '/dialtone/suppression', icon: ShieldOff },
+      { advanced: true, name: 'Domains', href: '/deliverability/domains', icon: Globe },
     ],
   },
   {
@@ -131,10 +134,10 @@ const navSections = [
       { name: 'Companies', href: '/companies', icon: Building2 },
       { name: 'Contacts', href: '/contacts', icon: Users },
       { name: 'Discovery', href: '/discovery', icon: Sparkles },
-      { name: 'Groups', href: '/groups', icon: Folder },
-      { name: 'News', href: '/news', icon: Newspaper },
+      { advanced: true, name: 'Groups', href: '/groups', icon: Folder },
+      { advanced: true, name: 'News', href: '/news', icon: Newspaper },
       { name: 'Import', href: '/import', icon: Upload },
-      { name: 'Business Card', href: '/scan', icon: CreditCard },
+      { advanced: true, name: 'Business Card', href: '/scan', icon: CreditCard },
     ],
   },
   {
@@ -144,10 +147,10 @@ const navSections = [
       { name: 'Inbox', href: '/inbox', icon: Inbox },
       { name: 'Campaigns', href: '/outreach', icon: Send },
       { name: 'Autopilot Campaigns', href: '/campaigns', icon: Rocket },
-      { name: 'Calls', href: '/calls', icon: Phone },
+      { advanced: true, name: 'Calls', href: '/calls', icon: Phone },
       { name: 'Sequences', href: '/sequences', icon: ListOrdered },
       { name: 'Follow-ups', href: '/follow-ups', icon: Bell },
-      { name: 'Demos', href: '/demos', icon: Rocket },
+      { advanced: true, name: 'Demos', href: '/demos', icon: Rocket },
     ],
   },
   {
@@ -155,9 +158,9 @@ const navSections = [
     label: 'Clients',
     items: [
       { name: 'Clients', href: '/clients', icon: HeartPulse },
-      { name: 'Client Dashboard', href: '/client-dashboard', icon: PieChart },
+      { advanced: true, name: 'Client Dashboard', href: '/client-dashboard', icon: PieChart },
       { name: 'Reports', href: '/reports', icon: BarChart3 },
-      { name: 'Sentiment', href: '/sentiment', icon: Brain },
+      { advanced: true, name: 'Sentiment', href: '/sentiment', icon: Brain },
     ],
   },
   {
@@ -172,8 +175,8 @@ const navSections = [
     label: 'Resources',
     items: [
       { name: 'Knowledge Base', href: '/knowledge', icon: BookOpen },
-      { name: 'GDPR Requests', href: '/gdpr', icon: ShieldCheck },
-      { name: 'Features', href: '/features', icon: Sparkle },
+      { advanced: true, name: 'GDPR Requests', href: '/gdpr', icon: ShieldCheck },
+      { advanced: true, name: 'Features', href: '/features', icon: Sparkle },
       { name: 'Help Center', href: '/help', icon: LifeBuoy },
     ],
   },
@@ -247,6 +250,9 @@ export default function Layout({ children }) {
       /* ignore quota / privacy-mode errors */
     }
   }, [collapsed]);
+
+  const [showMore, setShowMore] = useState({});
+  const toggleMore = (key) => setShowMore((prev) => ({ ...prev, [key]: !prev[key] }));
 
   const toggleSection = (key) =>
     setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -462,14 +468,33 @@ export default function Layout({ children }) {
               </button>
               {!isCollapsed && (
                 <div className="mt-0.5 space-y-0.5 pb-1">
-                  {section.items.map((item) => (
-                    <NavLink
-                      key={item.name}
-                      item={item}
-                      showBadge={item.name === 'Inbox' && hasNewReplies}
-                      count={item.name === 'Inbox' ? inboxUnread : 0}
-                    />
-                  ))}
+                  {section.items
+                    .filter(
+                      (item) =>
+                        !item.advanced ||
+                        showMore[section.key] ||
+                        isActivePath(item.href, item.end)
+                    )
+                    .map((item) => (
+                      <NavLink
+                        key={item.name}
+                        item={item}
+                        showBadge={item.name === 'Inbox' && hasNewReplies}
+                        count={item.name === 'Inbox' ? inboxUnread : 0}
+                      />
+                    ))}
+                  {section.items.some((it) => it.advanced) && (
+                    <button
+                      type="button"
+                      onClick={() => toggleMore(section.key)}
+                      aria-expanded={!!showMore[section.key]}
+                      className="w-full rounded-md px-3 py-1 text-left text-xs text-gray-400 transition-colors hover:text-gray-600"
+                    >
+                      {showMore[section.key]
+                        ? 'Show less'
+                        : `More (${section.items.filter((it) => it.advanced).length})`}
+                    </button>
+                  )}
                 </div>
               )}
             </div>

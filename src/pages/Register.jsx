@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Navigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Loader2, Mail, Lock, Building2, User } from 'lucide-react';
+import { Loader2, Mail, Lock, Building2 } from 'lucide-react';
 import Logo from '../components/Logo';
 import { DoAideFooter } from '../components/DoAideBrand';
 import { useAuth } from '../context/AuthContext';
@@ -10,7 +10,6 @@ export default function Register() {
   const { register, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [orgName, setOrgName] = useState('');
-  const [adminName, setAdminName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -34,7 +33,6 @@ export default function Register() {
         orgName: orgName.trim(),
         adminEmail: email.trim(),
         password,
-        adminName: adminName.trim() || undefined,
       });
       toast.success('Organization created — welcome to DoAide Prospect');
       navigate('/', { replace: true });
@@ -94,26 +92,8 @@ export default function Register() {
           </div>
 
           <div>
-            <label htmlFor="adminName" className="mb-1.5 block text-sm font-medium text-gray-700">
-              Your name <span className="font-normal text-gray-400">(optional)</span>
-            </label>
-            <div className="relative">
-              <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <input
-                id="adminName"
-                type="text"
-                autoComplete="name"
-                value={adminName}
-                onChange={(e) => setAdminName(e.target.value)}
-                className={inputClass}
-                placeholder="Jane Doe"
-              />
-            </div>
-          </div>
-
-          <div>
             <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-gray-700">
-              Work email
+              Email
             </label>
             <div className="relative">
               <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
