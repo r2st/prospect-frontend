@@ -98,11 +98,11 @@ const navSections = [
     key: 'dialtone',
     label: 'Autopilot',
     items: [
+      { name: 'Campaigns', href: '/dialtone/campaigns', icon: BarChart3, hero: true },
       { name: 'Console', href: '/dialtone', icon: Radio, end: true },
       { name: 'Replies', href: '/dialtone/inbox', icon: MailCheck },
       { name: 'AI Drafts', href: '/dialtone/drafts', icon: PenLine },
       { advanced: true, name: 'Templates', href: '/dialtone/templates', icon: FileText },
-      { name: 'Campaigns', href: '/dialtone/campaigns', icon: BarChart3 },
       { advanced: true, name: 'A/B Tests', href: '/dialtone/ab-tests', icon: Beaker },
       { advanced: true, name: 'Send Timing', href: '/dialtone/send-timing', icon: Clock },
       { advanced: true, name: 'Policies', href: '/dialtone/policies', icon: SlidersHorizontal },
@@ -402,6 +402,11 @@ export default function Layout({ children }) {
           )}
         />
         {item.name}
+        {item.hero && (
+          <span className="ml-0.5 inline-flex items-center">
+            <Sparkle className="h-3 w-3 text-amber-400" />
+          </span>
+        )}
         {count > 0 ? (
           <span
             className="ml-auto inline-flex min-w-[1.25rem] flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white"
@@ -441,12 +446,20 @@ export default function Layout({ children }) {
           const sectionHasBadge =
             section.key === 'outreach' && hasNewReplies;
           return (
-            <div key={section.key}>
+            <div
+              key={section.key}
+              className={cn(
+                section.key === 'dialtone' && !isCollapsed && 'rounded-lg bg-indigo-50/40 py-1'
+              )}
+            >
               <button
                 type="button"
                 onClick={() => toggleSection(section.key)}
                 aria-expanded={!isCollapsed}
-                className="group flex w-full items-center gap-1.5 rounded-md px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-400 transition-colors hover:text-gray-600"
+                className={cn(
+                  'group flex w-full items-center gap-1.5 rounded-md px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider transition-colors hover:text-gray-600',
+                  section.key === 'dialtone' ? 'text-indigo-500' : 'text-gray-400'
+                )}
               >
                 <ChevronRight
                   className={cn(

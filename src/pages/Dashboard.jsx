@@ -25,6 +25,8 @@ import {
   DollarSign,
   Flame,
   Building,
+  Rocket,
+  Zap,
 } from 'lucide-react';
 import {
   BarChart, Bar, LineChart, Line, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid,
@@ -494,6 +496,38 @@ class DashboardErrorBoundary extends React.Component {
   }
 }
 
+// ─── Campaign CTA ──────────────────────────────────────────────────────────
+
+function CampaignCTA({ navigate }) {
+  return (
+    <div className="group relative overflow-hidden rounded-2xl border border-indigo-100 bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 px-8 py-6 shadow-sm transition-shadow hover:shadow-lg">
+      <div className="pointer-events-none absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/10" />
+      <div className="pointer-events-none absolute -bottom-6 right-16 h-24 w-24 rounded-full bg-white/5" />
+      <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-4">
+          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
+            <Rocket className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-white">Start a Campaign</h2>
+            <p className="mt-0.5 max-w-md text-sm text-indigo-100">
+              Automate your outreach — AI drafts personalized emails for every prospect.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => navigate('/dialtone/campaigns')}
+          className="inline-flex flex-shrink-0 items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-indigo-700 shadow-sm transition-all hover:bg-indigo-50 hover:shadow-md"
+        >
+          <Zap className="h-4 w-4" />
+          Launch Campaign
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Dashboard ─────────────────────────────────────────────────────────
 
 function Dashboard() {
@@ -560,6 +594,9 @@ function Dashboard() {
 
       {/* Getting-started checklist for new users (self-dismissing). */}
       <GettingStarted />
+
+      {/* Campaign CTA hero card */}
+      <CampaignCTA navigate={navigate} />
 
       {/* Quick Stats Row (KPIs) */}
       <QuickStatsRow kpis={kpis} metricsLoading={metricsLoading} />
