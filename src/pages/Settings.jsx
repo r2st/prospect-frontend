@@ -863,11 +863,11 @@ export default function Settings() {
           </div>
           <div>
             <h2 className="text-lg font-semibold text-gray-900">About</h2>
-            <p className="text-sm text-gray-500">DoAide Prospect v1.0 by Apprend Technologies</p>
+            <p className="text-sm text-gray-500">DoAide Prospect v1.0 by DoAide</p>
           </div>
         </div>
         <div className="mt-4 space-y-2 text-sm text-gray-600">
-          <p>DoAide Prospect is a B2B lead generation and management platform designed to help sales teams discover, qualify, and engage with potential customers.</p>
+          <p>DoAide Prospect is a B2B lead-to-client platform designed to help sales teams discover, qualify, and engage with potential customers.</p>
           <p className="text-xs text-gray-400">
             Built with React, Tailwind CSS, and FastAPI.
           </p>
