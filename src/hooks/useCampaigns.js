@@ -101,6 +101,26 @@ const STATUS_TOAST = {
   stopped: 'Campaign stopped',
 };
 
+// Manual sends this tab made recently. The server paces each mailbox (45s
+// apart, 30 an hour); this only warns before a click that would hit that.
+const recentManualSends = [];
+const QUICK_WINDOW_MS = 2 * 60 * 1000;
+const QUICK_LIMIT = 3;
+function noteManualSend() {
+  const now = Date.now();
+  while (recentManualSends.length && now - recentManualSends[0] > QUICK_WINDOW_MS) recentManualSends.shift();
+  recentManualSends.push(now);
+  if (recentManualSends.length > QUICK_LIMIT) {
+    toast("You're sending quickly. To protect the mailbox's reputation, sends are spaced at least 45s apart and capped at 30 an hour — extra ones wait in the queue.", { icon: '⚠️', duration: 6000 });
+  }
+}
+
+function toastSendResult(r, to) {
+  if (r?.outcome === 'sent') toast.success(`Email sent to ${to}`);
+  else if (r?.outcome === 'held') toast(`Approved, not sent yet — ${r.detail || 'it will go out from the queue'}`, { icon: '⏳' });
+  else toast.error(`Not sent — ${r?.detail || r?.outcome || 'unknown reason'}`);
+}
+
 export function useCampaignActions(id) {
   const setStatus = useMutation({
     // `resumed` only picks the toast; it isn't sent.
@@ -168,12 +188,22 @@ export function useCampaignActions(id) {
 
   // Send now: { pid, to } where `to` names the recipient for the toast.
   const sendNow = useMutation({
-    mutationFn: ({ pid }) => campaignsApi.sendNow(id, pid),
+    mutationFn: ({ pid }) => { noteManualSend(); return campaignsApi.sendNow(id, pid); },
     onSuccess: (r, { to }) => {
       invalidateCampaign(id);
-      if (r?.outcome === 'sent') toast.success(`Email sent to ${to}`);
-      else if (r?.outcome === 'held') toast(`Approved, not sent yet — ${r.detail || 'it will go out from the queue'}`, { icon: '⏳' });
-      else toast.error(`Not sent — ${r?.detail || r?.outcome || 'unknown reason'}`);
+      toastSendResult(r, to);
+    },
+    onError: (e) => toast.error(errMsg(e, 'Could not send the email')),
+  });
+
+  const composeSend = useMutation({
+    mutationFn: ({ pid, subject, body }) => {
+      noteManualSend();
+      return campaignsApi.composeSend(id, pid, { email_subject: subject, email_body: body });
+    },
+    onSuccess: (r, { to }) => {
+      invalidateCampaign(id);
+      toastSendResult(r, to);
     },
     onError: (e) => toast.error(errMsg(e, 'Could not send the email')),
   });
@@ -184,10 +214,13 @@ export function useCampaignActions(id) {
       invalidateCampaign(id);
       const results = r?.results || [];
       const sent = results.filter((x) => x.outcome === 'sent').length;
-      const notSent = results.filter((x) => x.outcome !== 'sent');
+      const queued = results.filter((x) => x.outcome === 'queued').length;
+      const notSent = results.filter((x) => x.outcome !== 'sent' && x.outcome !== 'queued');
       const why = [...new Set(notSent.map((x) => x.detail || x.outcome))].join('; ');
-      const msg = `${sent} sent${notSent.length ? ` · ${notSent.length} not sent (${why})` : ''}`;
-      if (sent) toast.success(msg);
+      const msg = `${sent} sent`
+        + (queued ? ` · ${queued} queued, 1–2 min apart` : '')
+        + (notSent.length ? ` · ${notSent.length} not sent (${why})` : '');
+      if (sent || queued) toast.success(msg);
       else toast.error(msg);
     },
     onError: (e) => toast.error(errMsg(e, 'Could not send the emails')),
@@ -213,6 +246,8 @@ export function useCampaignActions(id) {
     // All verified drafts: bulkApprove(). Picked rows: bulkApprove({ prospect_ids }).
     bulkApprove: (data = { verified_only: true }, opts) => bulkApprove.mutate(data, opts),
     sendNow: (pid, to, opts) => sendNow.mutate({ pid, to }, opts),
+    composeSend: (pid, { subject, body }, to, opts) => composeSend.mutate({ pid, subject, body, to }, opts),
+    isComposeSending: composeSend.isPending,
     sendNowMany: (pids, opts) => sendNowMany.mutate(pids, opts),
     isSendingMany: sendNowMany.isPending,
     isBulkApproving: bulkApprove.isPending,

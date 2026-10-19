@@ -299,6 +299,9 @@ export const campaignsApi = {
   // Approve + send in the request (same safety gates as the queue). One → { outcome, detail, status };
   // many (≤10) → { results: [...], sent }.
   sendNow: (id, pid) => api.post(`/campaigns/${id}/prospects/${pid}/send-now`, null, { timeout: 60000 }).then(r => r.data),
+  // A hand-written { email_subject, email_body } sent to one prospect now.
+  composeSend: (id, pid, data) =>
+    api.post(`/campaigns/${id}/prospects/${pid}/compose-send`, data, { timeout: 60000 }).then(r => r.data),
   sendNowMany: (id, pids) =>
     api.post(`/campaigns/${id}/prospects/send-now`, { prospect_ids: pids }, { timeout: 180000 }).then(r => r.data),
   // Connected Gmail + SMTP mailboxes a campaign can send from.

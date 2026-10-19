@@ -11,6 +11,7 @@ import {
   FileText,
   Pause,
   Pencil,
+  PenLine,
   Play,
   Search,
   Send,
@@ -46,6 +47,7 @@ import ErrorBoundary from '../components/ErrorBoundary';
 import Skeleton from '../components/Skeleton';
 import EmailPreviewModal from '../components/campaigns/EmailPreviewModal';
 import AddContactModal from '../components/campaigns/AddContactModal';
+import ComposeEmailModal from '../components/campaigns/ComposeEmailModal';
 import ContactEditModal from '../components/campaigns/ContactEditModal';
 import SenderLine from '../components/campaigns/SenderLine';
 import TemplatePanel from '../components/campaigns/TemplatePanel';
@@ -225,7 +227,7 @@ function SelectBox({ checked, indeterminate = false, onChange, label }) {
   );
 }
 
-function ProspectActions({ p, busy, sending, onApprove, onSkip, onSendNow, onPreview, onEditContact, onAddAtCompany }) {
+function ProspectActions({ p, busy, sending, onApprove, onSkip, onSendNow, onCompose, onPreview, onEditContact, onAddAtCompany }) {
   if (p.pending) {
     // Optimistic row from Add contact; nothing to act on until it's saved.
     return (
@@ -302,6 +304,18 @@ function ProspectActions({ p, busy, sending, onApprove, onSkip, onSendNow, onPre
           Skip
         </button>
       )}
+      {onCompose && p.contact_email && ['queued', 'draft', 'approved'].includes(p.status) && (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => onCompose(p)}
+          aria-label={`Write an email to ${label}`}
+          title="Write your own email and send it now"
+          className="rounded-md p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50"
+        >
+          <PenLine className="h-4 w-4" />
+        </button>
+      )}
       <button
         type="button"
         onClick={() => onPreview(p)}
@@ -314,7 +328,7 @@ function ProspectActions({ p, busy, sending, onApprove, onSkip, onSendNow, onPre
   );
 }
 
-function ProspectTable({ campaignId, actions, attachments = [], sender = null, draftsPending = 0, canSend = false }) {
+function ProspectTable({ campaignId, actions, attachments = [], sender = null, draftsPending = 0, canSend = false, onCompose = null }) {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState('');
   // Draft ids picked for "Approve selected". Only drafts can be picked.
@@ -334,7 +348,7 @@ function ProspectTable({ campaignId, actions, attachments = [], sender = null, d
   const sendNow = canSend ? (p) => actions.sendNow(p.id, recipient(p), { onSuccess: () => setPreviewing(null) }) : null;
   const rowProps = (p) => ({
     p, busy: busyFor(p), sending: actions.sendingProspect === p.id,
-    onApprove: approve, onSkip: skip, onSendNow: sendNow, onPreview: setPreviewing,
+    onApprove: approve, onSkip: skip, onSendNow: sendNow, onCompose: canSend ? onCompose : null, onPreview: setPreviewing,
     onEditContact: setEditing, onAddAtCompany: setAddingAt,
   });
 
@@ -408,7 +422,7 @@ function ProspectTable({ campaignId, actions, attachments = [], sender = null, d
                   onClick={sendSelected}
                   title={picked.length > SEND_NOW_MAX
                     ? `Send now handles up to ${SEND_NOW_MAX} at a time; approve larger batches instead`
-                    : 'Approve and send the selected emails right away'}
+                    : 'The first goes now; the rest follow 1–2 minutes apart so the mailbox isn’t flagged'}
                   className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-50 disabled:opacity-50"
                 >
                   <Send className="h-3.5 w-3.5" />
@@ -619,6 +633,8 @@ export default function CampaignDashboard() {
   const discover = useDiscoverMore(id);
   const [confirm, setConfirm] = useState(null); // 'stop' | 'delete'
   const [adding, setAdding] = useState(false);
+  // { prospect } when writing to one row; { prospect: null } from the header picker.
+  const [composing, setComposing] = useState(null);
 
   if (isLoading) return <DashboardSkeleton />;
 
@@ -690,6 +706,16 @@ export default function CampaignDashboard() {
             >
               <Play className="h-4 w-4" />
               Finish setup
+            </button>
+          )}
+          {status === 'active' && (
+            <button
+              type="button"
+              onClick={() => setComposing({ prospect: null })}
+              className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+            >
+              <PenLine className="h-4 w-4" />
+              Send email
             </button>
           )}
           {status !== 'stopped' && (
@@ -771,7 +797,7 @@ export default function CampaignDashboard() {
       <ErrorBoundary resetKey={`${id}:prospects`} fallback={({ reset }) => <SectionFallback reset={reset} />}>
         <ProspectTable campaignId={id} actions={actions} attachments={campaign.attachments || []}
           sender={campaign.sender || null} draftsPending={status === 'stopped' ? 0 : metrics.drafts_pending}
-          canSend={status === 'active'} />
+          canSend={status === 'active'} onCompose={(p) => setComposing({ prospect: p })} />
       </ErrorBoundary>
 
       <section aria-label="Campaign stats"
@@ -810,6 +836,15 @@ export default function CampaignDashboard() {
       </ErrorBoundary>
 
       {adding && <AddContactModal campaignId={id} onClose={() => setAdding(false)} />}
+      {composing && (
+        <ComposeEmailModal
+          campaignId={id}
+          actions={actions}
+          prospect={composing.prospect}
+          sender={campaign.sender || null}
+          onClose={() => setComposing(null)}
+        />
+      )}
 
       <ConfirmDialog
         open={confirm === 'stop'}

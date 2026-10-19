@@ -154,7 +154,7 @@ export function DraftTemplateSwitcher({ campaignId, prospect, templates }) {
 // Appended to every campaign email when it's sent, so the preview shows it as
 // the recipient will. The link is a stand-in on purpose: a real one would
 // unsubscribe the prospect if the reviewer clicked it.
-function UnsubscribeFooter() {
+export function UnsubscribeFooter() {
   return (
     <div className="mt-3 whitespace-pre-line border-t border-gray-200 pt-2 text-xs text-gray-500" data-testid="preview-unsubscribe">
       <p>

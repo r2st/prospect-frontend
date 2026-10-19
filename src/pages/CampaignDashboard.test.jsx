@@ -14,6 +14,7 @@ const api = {
   addManual: vi.fn(),
   sendNow: vi.fn(),
   sendNowMany: vi.fn(),
+  composeSend: vi.fn(),
   skip: vi.fn(),
   discover: vi.fn(),
 };
@@ -29,6 +30,7 @@ vi.mock('../api/client', () => ({
     addManual: (...a) => api.addManual(...a),
     sendNow: (...a) => api.sendNow(...a),
     sendNowMany: (...a) => api.sendNowMany(...a),
+    composeSend: (...a) => api.composeSend(...a),
     skip: (...a) => api.skip(...a),
     discover: (...a) => api.discover(...a),
   },
@@ -296,6 +298,43 @@ describe('CampaignDashboard', () => {
     renderPage();
     const [row] = await screen.findAllByTestId('prospect-row');
     expect(within(row).queryByRole('button', { name: /now$/ })).not.toBeInTheDocument();
+  });
+
+  it('writes an email to a row and sends it', async () => {
+    api.composeSend.mockResolvedValue({ id: 'p1', outcome: 'sent', status: 'sent' });
+    renderPage();
+    const [row] = await screen.findAllByTestId('prospect-row');
+    await userEvent.click(within(row).getByRole('button', { name: 'Write an email to Ana Li' }));
+    const dialog = screen.getByRole('dialog', { name: 'Write an email' });
+    const body = within(dialog).getByLabelText('Message');
+    await userEvent.clear(body);
+    await userEvent.type(body, 'Custom words');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Send now' }));
+    await waitFor(() => expect(api.composeSend).toHaveBeenCalledWith(
+      'c1', 'p1', { email_subject: 'Faster quotes for Acme', email_body: 'Custom words' }));
+    await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith('Email sent to Ana Li at acme.com'));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Write an email' })).not.toBeInTheDocument());
+  });
+
+  it('has a Send email button in the header of an active campaign', async () => {
+    renderPage();
+    expect(await screen.findByRole('button', { name: 'Send email' })).toBeInTheDocument();
+  });
+
+  it('says when "send selected" paced the rest', async () => {
+    api.prospects.mockResolvedValue({
+      ...PROSPECTS,
+      items: [...PROSPECTS.items, { id: 'p3', status: 'draft', company_name: 'Gamma Works', contact_name: 'Cy Ode', email_subject: 's', email_body: 'b' }],
+      total: 3,
+    });
+    api.sendNowMany.mockResolvedValue({
+      sent: 1, queued: 1, results: [{ id: 'p1', outcome: 'sent' }, { id: 'p3', outcome: 'queued' }],
+    });
+    renderPage();
+    await screen.findAllByTestId('prospect-row');
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select all drafts on this page' }));
+    await userEvent.click(within(screen.getByTestId('bulk-approve-bar')).getByRole('button', { name: /Send selected now/ }));
+    await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith('1 sent · 1 queued, 1–2 min apart'));
   });
 
   it('sends the ticked drafts now', async () => {
