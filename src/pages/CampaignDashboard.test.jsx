@@ -270,9 +270,9 @@ describe('CampaignDashboard', () => {
   it('select-all ticks every draft on the page', async () => {
     renderPage();
     await screen.findAllByTestId('prospect-row');
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Select all drafts on this page' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select all unsent emails on this page' }));
     expect(within(screen.getByTestId('bulk-approve-bar')).getByText('1 selected')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Select all drafts on this page' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select all unsent emails on this page' }));
     expect(screen.queryByText('1 selected')).not.toBeInTheDocument();
   });
 
@@ -291,6 +291,64 @@ describe('CampaignDashboard', () => {
     const [row] = await screen.findAllByTestId('prospect-row');
     await userEvent.click(within(row).getByRole('button', { name: 'Send email to Ana Li now' }));
     await waitFor(() => expect(toastMock.error).toHaveBeenCalledWith('Not sent — Already emailed — never sent twice'));
+  });
+
+  describe('approved emails still waiting to send', () => {
+    const READY = {
+      id: 'p5', status: 'approved', company_name: 'Echo Ltd', company_domain: 'echo.io', contact_name: 'Ed Wu',
+      contact_email: 'ed@echo.io', email_verified: true, email_subject: 'Hello Echo', email_body: 'Hi Ed',
+    };
+    beforeEach(() => {
+      api.prospects.mockResolvedValue({ ...PROSPECTS, items: [...PROSPECTS.items, READY], total: 3 });
+    });
+
+    it('can be sent now from the row', async () => {
+      api.sendNow.mockResolvedValue({ id: 'p5', outcome: 'sent', status: 'sent' });
+      renderPage();
+      const rows = await screen.findAllByTestId('prospect-row');
+      const row = rows.find((r) => r.textContent.includes('Echo Ltd'));
+      expect(within(row).queryByRole('button', { name: /Approve email/ })).not.toBeInTheDocument();
+      await userEvent.click(within(row).getByRole('button', { name: 'Send email to Ed Wu now' }));
+      await waitFor(() => expect(api.sendNow).toHaveBeenCalledWith('c1', 'p5'));
+      await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith('Email sent to Ed Wu at echo.io'));
+    });
+
+    it('can be ticked and sent with the selection, without an Approve button', async () => {
+      api.sendNowMany.mockResolvedValue({ sent: 1, queued: 0, results: [{ id: 'p5', outcome: 'sent' }] });
+      renderPage();
+      const rows = await screen.findAllByTestId('prospect-row');
+      const row = rows.find((r) => r.textContent.includes('Echo Ltd'));
+      await userEvent.click(within(row).getByRole('checkbox', { name: 'Select Ed Wu' }));
+      const bar = screen.getByTestId('bulk-approve-bar');
+      expect(within(bar).queryByRole('button', { name: /Approve selected/ })).not.toBeInTheDocument();
+      await userEvent.click(within(bar).getByRole('button', { name: /Send selected now/ }));
+      await waitFor(() => expect(api.sendNowMany).toHaveBeenCalledWith('c1', ['p5']));
+    });
+
+    it('can be sent now from the preview', async () => {
+      api.sendNow.mockResolvedValue({ id: 'p5', outcome: 'sent', status: 'sent' });
+      renderPage();
+      const rows = await screen.findAllByTestId('prospect-row');
+      const row = rows.find((r) => r.textContent.includes('Echo Ltd'));
+      await userEvent.click(within(row).getByRole('button', { name: 'Preview email to Ed Wu' }));
+      const dialog = screen.getByRole('dialog');
+      expect(within(dialog).queryByRole('button', { name: /Approve/ })).not.toBeInTheDocument();
+      await userEvent.click(within(dialog).getByRole('button', { name: 'Send now' }));
+      await waitFor(() => expect(api.sendNow).toHaveBeenCalledWith('c1', 'p5'));
+    });
+
+    it('mixed selection approves only the drafts', async () => {
+      api.bulkApprove.mockResolvedValue({ approved: 1, skipped_unverified: 0, skipped_ineligible: 0 });
+      renderPage();
+      await screen.findAllByTestId('prospect-row');
+      await userEvent.click(screen.getByRole('checkbox', { name: 'Select all unsent emails on this page' }));
+      const bar = screen.getByTestId('bulk-approve-bar');
+      expect(within(bar).getByText('2 selected')).toBeInTheDocument();
+      await userEvent.click(within(bar).getByRole('button', { name: 'Approve selected (1)' }));
+      await waitFor(() =>
+        expect(api.bulkApprove).toHaveBeenCalledWith('c1', { prospect_ids: ['p1'], verified_only: false })
+      );
+    });
   });
 
   it('offers no send now on a paused campaign', async () => {
@@ -332,7 +390,7 @@ describe('CampaignDashboard', () => {
     });
     renderPage();
     await screen.findAllByTestId('prospect-row');
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Select all drafts on this page' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select all unsent emails on this page' }));
     await userEvent.click(within(screen.getByTestId('bulk-approve-bar')).getByRole('button', { name: /Send selected now/ }));
     await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith('1 sent · 1 queued, 1–2 min apart'));
   });

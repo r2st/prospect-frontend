@@ -281,11 +281,18 @@ function ProspectActions({ p, busy, sending, onApprove, onSkip, onSendNow, onCom
           disabled={busy}
           onClick={() => onSendNow(p)}
           aria-label={`Send email to ${label} now`}
-          title="Approve and send right away"
-          className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-50 disabled:opacity-50"
+          title={p.status === 'approved' ? 'Send right away instead of waiting in the queue' : 'Approve and send right away'}
+          className={cn(
+            'inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium disabled:opacity-50',
+            // Approved rows have no Approve button, so this is their main action.
+            p.status === 'approved'
+              ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+              : 'text-indigo-700 hover:bg-indigo-50'
+          )}
         >
           {sending ? (
-            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-indigo-200 border-t-indigo-600" />
+            <span className={cn('h-3.5 w-3.5 animate-spin rounded-full border-2',
+              p.status === 'approved' ? 'border-white/40 border-t-white' : 'border-indigo-200 border-t-indigo-600')} />
           ) : (
             <Send className="h-3.5 w-3.5" />
           )}
@@ -352,23 +359,27 @@ function ProspectTable({ campaignId, actions, attachments = [], sender = null, d
     onEditContact: setEditing, onAddAtCompany: setAddingAt,
   });
 
-  const draftsOnPage = items.filter((p) => p.status === 'draft');
-  // Drop ids that stopped being drafts (approved one by one, re-filtered away).
-  const pickable = new Set(draftsOnPage.map((p) => p.id));
+  // Drafts can be approved or sent; approved emails still waiting can be sent.
+  const isPickable = (p) => !p.pending && (p.status === 'draft' || (canSend && p.status === 'approved'));
+  const pickableOnPage = items.filter(isPickable);
+  // Drop ids that stopped being pickable (sent, skipped, re-filtered away).
+  const pickable = new Set(pickableOnPage.map((p) => p.id));
   const picked = [...selected].filter((pid) => pickable.has(pid));
-  const allPicked = draftsOnPage.length > 0 && picked.length === draftsOnPage.length;
+  const draftIds = new Set(items.filter((p) => p.status === 'draft').map((p) => p.id));
+  const pickedDrafts = picked.filter((pid) => draftIds.has(pid));
+  const allPicked = pickableOnPage.length > 0 && picked.length === pickableOnPage.length;
   const togglePick = (pid) => setSelected((prev) => {
     const next = new Set(prev);
     if (next.has(pid)) next.delete(pid); else next.add(pid);
     return next;
   });
-  const toggleAll = () => setSelected(allPicked ? new Set() : new Set(draftsOnPage.map((p) => p.id)));
+  const toggleAll = () => setSelected(allPicked ? new Set() : new Set(pickableOnPage.map((p) => p.id)));
   const SEND_NOW_MAX = 10;
   const sendSelected = () =>
     actions.sendNowMany(picked, { onSuccess: () => setSelected(new Set()) });
   const approveSelected = () =>
     // An explicit pick is approved as picked, like the per-row button.
-    actions.bulkApprove({ prospect_ids: picked, verified_only: false }, { onSuccess: () => setSelected(new Set()) });
+    actions.bulkApprove({ prospect_ids: pickedDrafts, verified_only: false }, { onSuccess: () => setSelected(new Set()) });
   // The open preview follows refetches, so a re-draft or a save shows at once.
   const shown = previewing ? items.find((p) => p.id === previewing.id) || previewing : null;
 
@@ -406,15 +417,17 @@ function ProspectTable({ campaignId, actions, attachments = [], sender = null, d
           {picked.length > 0 ? (
             <>
               <span className="font-medium text-gray-900">{picked.length} selected</span>
-              <button
-                type="button"
-                disabled={actions.isBulkApproving}
-                onClick={approveSelected}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-              >
-                <Check className="h-3.5 w-3.5" />
-                Approve selected
-              </button>
+              {pickedDrafts.length > 0 && (
+                <button
+                  type="button"
+                  disabled={actions.isBulkApproving}
+                  onClick={approveSelected}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  <Check className="h-3.5 w-3.5" />
+                  Approve selected{pickedDrafts.length < picked.length ? ` (${pickedDrafts.length})` : ''}
+                </button>
+              )}
               {canSend && (
                 <button
                   type="button"
@@ -493,7 +506,7 @@ function ProspectTable({ campaignId, actions, attachments = [], sender = null, d
             {items.map((p) => (
               <li key={p.id} className="space-y-2 p-4">
                 <div className="flex items-start justify-between gap-2">
-                  {p.status === 'draft' && (
+                  {isPickable(p) && (
                     <span className="pt-0.5">
                       <SelectBox checked={selected.has(p.id)} onChange={() => togglePick(p.id)}
                         label={`Select ${p.contact_name || p.company_name}`} />
@@ -522,12 +535,12 @@ function ProspectTable({ campaignId, actions, attachments = [], sender = null, d
               <thead className="bg-gray-50">
                 <tr>
                   <th className="w-10 px-4 py-3">
-                    {draftsOnPage.length > 0 && (
+                    {pickableOnPage.length > 0 && (
                       <SelectBox
                         checked={allPicked}
                         indeterminate={picked.length > 0 && !allPicked}
                         onChange={toggleAll}
-                        label="Select all drafts on this page"
+                        label="Select all unsent emails on this page"
                       />
                     )}
                   </th>
@@ -543,7 +556,7 @@ function ProspectTable({ campaignId, actions, attachments = [], sender = null, d
                 {items.map((p) => (
                   <tr key={p.id} className={cn('hover:bg-gray-50', selected.has(p.id) && 'bg-indigo-50/50', p.pending && 'opacity-60')} data-testid="prospect-row">
                     <td className="w-10 px-4 py-3">
-                      {p.status === 'draft' && (
+                      {isPickable(p) && (
                         <SelectBox checked={selected.has(p.id)} onChange={() => togglePick(p.id)}
                           label={`Select ${p.contact_name || p.company_name}`} />
                       )}
@@ -608,6 +621,8 @@ function ProspectTable({ campaignId, actions, attachments = [], sender = null, d
         onClose={() => setPreviewing(null)}
         onApprove={approve}
         onSkip={skip}
+        onSendNow={sendNow}
+        sending={shown ? actions.sendingProspect === shown.id : false}
         busy={shown ? busyFor(shown) : false}
         attachments={attachments}
         campaignId={campaignId}

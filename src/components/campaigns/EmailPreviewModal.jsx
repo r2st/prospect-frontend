@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { BookmarkPlus, Check, Download, FileText, Loader2, Mail, Paperclip, RefreshCw, SkipForward, X } from 'lucide-react';
+import { BookmarkPlus, Check, Download, FileText, Loader2, Mail, Paperclip, RefreshCw, Send, SkipForward, X } from 'lucide-react';
 import { campaignsApi } from '../../api/client';
 import { useRedraftProspect, useSaveDraftAsTemplate } from '../../hooks/useCampaigns';
 import { useEmailTemplates } from '../../hooks/useEmailTemplates';
@@ -191,7 +191,7 @@ function TemplateView({ template }) {
 // The generated email for one prospect, as it will be (or was) sent. Drafts can
 // be approved or skipped from here without going back to the table.
 export default function EmailPreviewModal({
-  prospect, onClose, onApprove, onSkip, busy, attachments = [], campaignId, sender = null,
+  prospect, onClose, onApprove, onSkip, onSendNow = null, sending = false, busy, attachments = [], campaignId, sender = null,
 }) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(null);
@@ -210,6 +210,8 @@ export default function EmailPreviewModal({
   if (!prospect) return null;
   const isDraft = prospect.status === 'draft';
   const canSkip = isDraft || prospect.status === 'queued';
+  // Drafts and approved emails still waiting in the queue can go out now.
+  const canSendNow = Boolean(onSendNow) && (isDraft || prospect.status === 'approved');
   const hasEmail = Boolean(prospect.subject || prospect.body);
   const template = prospect.template_id ? templates.find((t) => t.id === prospect.template_id) : null;
   const templateName = template?.name || prospect.template_name;
@@ -343,7 +345,7 @@ export default function EmailPreviewModal({
           )}
         </div>
 
-        {(isDraft || canSkip) && (
+        {(isDraft || canSkip || canSendNow) && (
           <div className="flex flex-col-reverse gap-2 border-t border-gray-200 px-5 py-3 sm:flex-row sm:justify-end">
             {canSkip && (
               <button
@@ -354,6 +356,21 @@ export default function EmailPreviewModal({
               >
                 <SkipForward className="h-4 w-4" />
                 Skip prospect
+              </button>
+            )}
+            {canSendNow && hasEmail && (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => onSendNow(prospect)}
+                className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50 ${
+                  isDraft
+                    ? 'border border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-50'
+                    : 'bg-indigo-600 text-white shadow-sm hover:bg-indigo-700'
+                }`}
+              >
+                {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                {sending ? 'Sending…' : 'Send now'}
               </button>
             )}
             {isDraft && hasEmail && (
