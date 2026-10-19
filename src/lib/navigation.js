@@ -61,7 +61,7 @@ import {
 
 // Autopilot Campaigns is the product's main feature: hand it a document and it
 // finds, writes to and follows up with prospects. It sits above everything
-// else and is styled apart from the rest of the nav.
+// else in the nav.
 export const heroNav = {
   key: 'autopilot',
   name: 'Autopilot Campaigns',

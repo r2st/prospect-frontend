@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -8,14 +8,7 @@ import {
   ChevronRight,
   ChevronLeft,
   LogOut,
-  ChevronUp,
-  Sparkles,
-  Plus,
-  Building2,
-  Users,
-  BarChart3,
-  UserCog,
-  MessageSquare,
+  Settings,
   LifeBuoy,
 } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -45,7 +38,7 @@ const allGroups = [heroNav, ...primaryNav, settingsNav, platformNav];
 
 export default function Layout({ children }) {
   const location = useLocation();
-  const { user, isAdmin, isPlatformAdmin, logout } = useAuth();
+  const { user, isPlatformAdmin, logout } = useAuth();
   // Platform admins get an extra top-level item for cross-org management.
   const navItems = useMemo(
     () => (isPlatformAdmin ? [...primaryNav, platformNav] : primaryNav),
@@ -53,12 +46,6 @@ export default function Layout({ children }) {
   );
   const [mobileOpen, setMobileOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
-  // Account/settings menu lives in a popover so the sidebar footer stays one row
-  // tall. Rendered inline it ate ~290px of a 720px viewport and squeezed the nav
-  // into a clipped stub.
-  const [accountOpen, setAccountOpen] = useState(false);
-  const accountMenuRef = useRef(null);
-
   const isActivePath = (href, end = false) => matchPath(location.pathname, href, end);
 
   // The area that owns the current route, and the page within it. Drives the
@@ -126,28 +113,7 @@ export default function Layout({ children }) {
 
   useEffect(() => {
     setMobileOpen(false);
-    setAccountOpen(false);
   }, [location.pathname]);
-
-  // Dismiss on Escape or an outside click. A rendered click-away overlay does
-  // not work here: the sidebar carries a transform, which makes it the
-  // containing block for `position: fixed` children, so an `inset-0` catcher
-  // would only cover the sidebar itself.
-  useEffect(() => {
-    if (!accountOpen) return undefined;
-    const onKeyDown = (e) => {
-      if (e.key === 'Escape') setAccountOpen(false);
-    };
-    const onPointerDown = (e) => {
-      if (!accountMenuRef.current?.contains(e.target)) setAccountOpen(false);
-    };
-    document.addEventListener('keydown', onKeyDown);
-    document.addEventListener('pointerdown', onPointerDown);
-    return () => {
-      document.removeEventListener('keydown', onKeyDown);
-      document.removeEventListener('pointerdown', onPointerDown);
-    };
-  }, [accountOpen]);
 
   useEffect(() => {
     if (mobileOpen) {
@@ -196,8 +162,6 @@ export default function Layout({ children }) {
     );
   };
 
-  const heroActive = currentGroup === heroNav;
-
   const SidebarContent = (
     <>
       <div className="flex items-center justify-between gap-2 border-b border-gray-200 px-5 py-4">
@@ -217,41 +181,7 @@ export default function Layout({ children }) {
       {/* min-h-0 lets this actually shrink and scroll: a flex child defaults to
           min-height:auto, which pins it to its content height. */}
       <nav aria-label="Main" className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-4">
-        {/* The hero: Autopilot Campaigns is the product, so it gets the one
-            coloured block in an otherwise neutral sidebar, plus a direct
-            "new campaign" shortcut. */}
-        <div
-          className={cn(
-            'relative mb-3 overflow-hidden rounded-xl bg-gradient-to-br from-indigo-600 via-indigo-500 to-purple-600 p-0.5 shadow-sm transition-shadow hover:shadow-md',
-            heroActive && 'ring-2 ring-indigo-300 ring-offset-1'
-          )}
-        >
-          <Link
-            to={heroNav.href}
-            aria-current={heroActive ? 'page' : undefined}
-            className="flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-white"
-          >
-            <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-white/20">
-              <heroNav.icon className="h-[18px] w-[18px]" />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="flex items-center gap-1 text-sm font-semibold leading-tight">
-                {heroNav.name}
-                <Sparkles className="h-3.5 w-3.5 flex-shrink-0 text-amber-200" aria-hidden="true" />
-              </span>
-              <span className="block text-[11px] leading-tight text-indigo-100">
-                Finds, writes &amp; follows up
-              </span>
-            </span>
-          </Link>
-          <Link
-            to="/campaigns/new"
-            className="mx-1 mb-1 flex items-center justify-center gap-1.5 rounded-lg bg-white/15 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/25"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            New campaign
-          </Link>
-        </div>
+        <NavLink item={heroNav} active={currentGroup === heroNav} />
 
         {navItems.map((item) => (
           <NavLink
@@ -268,78 +198,11 @@ export default function Layout({ children }) {
       </nav>
 
       {/* flex-shrink-0 keeps the footer at its natural height instead of being
-          compressed into the nav's scroll area. */}
-      <div
-        ref={accountMenuRef}
-        className="relative flex-shrink-0 border-t border-gray-200 px-3 py-2"
-      >
-        {accountOpen && (
-          <>
-            {/* Opens upward from the trigger; the nav underneath keeps its full
-                height whenever this is closed. */}
-            <div
-              role="menu"
-              aria-label="Account and workspace settings"
-              className="absolute inset-x-3 bottom-full z-50 mb-2 max-h-[60vh] space-y-0.5 overflow-y-auto rounded-xl border border-gray-200 bg-white p-1.5 shadow-lg"
-            >
-              <NavLink
-                item={{ name: 'Organization', href: '/settings/organization', icon: Building2 }}
-                onClick={() => setAccountOpen(false)}
-              />
-              <NavLink
-                item={{ name: 'Team', href: '/settings/team', icon: Users }}
-                onClick={() => setAccountOpen(false)}
-              />
-              <NavLink
-                item={{ name: 'Usage', href: '/settings/usage', icon: BarChart3 }}
-                onClick={() => setAccountOpen(false)}
-              />
-              {isAdmin && (
-                <NavLink
-                  item={{ name: 'Users', href: '/admin/users', icon: UserCog }}
-                  onClick={() => setAccountOpen(false)}
-                />
-              )}
-              {isAdmin && (
-                <NavLink
-                  item={{ name: 'Feedback', href: '/admin/feedback', icon: MessageSquare }}
-                  onClick={() => setAccountOpen(false)}
-                />
-              )}
-              <NavLink
-                item={{ name: 'Help Center', href: '/help', icon: LifeBuoy }}
-                onClick={() => setAccountOpen(false)}
-              />
-              {user && (
-                <>
-                  <div className="my-1 border-t border-gray-100" />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAccountOpen(false);
-                      logout();
-                    }}
-                    className="group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
-                  >
-                    <LogOut className="h-[18px] w-[18px] flex-shrink-0 text-gray-400 transition-colors group-hover:text-gray-600" />
-                    Sign out
-                  </button>
-                </>
-              )}
-            </div>
-          </>
-        )}
-
-        <button
-          type="button"
-          onClick={() => setAccountOpen((open) => !open)}
-          aria-haspopup="menu"
-          aria-expanded={accountOpen}
-          className={cn(
-            'relative z-50 flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left transition-colors hover:bg-gray-100',
-            accountOpen && 'bg-gray-100'
-          )}
-        >
+          compressed into the nav's scroll area. Account actions are plain,
+          always-visible icons rather than a menu hidden behind the user's
+          name — nobody guessed the name was clickable. */}
+      <div className="flex-shrink-0 border-t border-gray-200 px-3 py-2">
+        <div className="flex items-center gap-2.5 px-3 py-2">
           <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-semibold uppercase text-indigo-700">
             {(user?.name || user?.email || '?').trim().charAt(0)}
           </span>
@@ -347,17 +210,40 @@ export default function Layout({ children }) {
             <div className="truncate text-sm font-medium text-gray-900">
               {user?.name || 'Account'}
             </div>
-            <div className="truncate text-[11px] capitalize text-gray-400">
-              {user?.role || 'Settings'}
-            </div>
-          </div>
-          <ChevronUp
-            className={cn(
-              'h-4 w-4 flex-shrink-0 text-gray-400 transition-transform duration-200',
-              accountOpen && 'rotate-180'
+            {user?.role && (
+              <div className="truncate text-[11px] capitalize text-gray-400">{user.role}</div>
             )}
-          />
-        </button>
+          </div>
+          <div className="flex flex-shrink-0 items-center">
+            <Link
+              to="/settings"
+              title="Settings"
+              aria-label="Settings"
+              className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+            >
+              <Settings className="h-4 w-4" />
+            </Link>
+            <Link
+              to="/help"
+              title="Help Center"
+              aria-label="Help Center"
+              className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+            >
+              <LifeBuoy className="h-4 w-4" />
+            </Link>
+            {user && (
+              <button
+                type="button"
+                onClick={logout}
+                title="Sign out"
+                aria-label="Sign out"
+                className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        </div>
 
         <div className="px-3 pb-0.5 pt-1">
           <div className="text-[11px] font-medium text-gray-400">DoAide Prospect v1.0 &middot; B2B Lead Gen</div>
