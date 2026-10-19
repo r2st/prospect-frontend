@@ -295,16 +295,29 @@ describe('Inbox account filter', () => {
 });
 
 describe('Inbox tabs & filters', () => {
-  it('has Priority and Archived tabs that drive the filter param', async () => {
+  it('shows only All, Received, Sent and Needs Reply as tabs', async () => {
     renderInbox();
     await waitFor(() => expect(mockGetInbox).toHaveBeenCalled());
 
-    await userEvent.click(screen.getByRole('button', { name: /Priority/i }));
+    for (const name of ['All', 'Received', 'Sent', 'Needs Reply']) {
+      expect(screen.getByRole('button', { name })).toBeInTheDocument();
+    }
+    expect(screen.queryByRole('button', { name: 'Priority' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: /Priority/i })).not.toBeInTheDocument();
+  });
+
+  it('puts Priority and Archived under More, and drives the filter param', async () => {
+    renderInbox();
+    await waitFor(() => expect(mockGetInbox).toHaveBeenCalled());
+
+    await userEvent.click(screen.getByRole('button', { name: /More/i }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /Priority/i }));
     await waitFor(() =>
       expect(mockGetInbox).toHaveBeenCalledWith(expect.objectContaining({ filter: 'priority' }))
     );
-
-    await userEvent.click(screen.getByRole('button', { name: /Archived/i }));
+    // The trigger now names the active view so it isn't hidden.
+    await userEvent.click(screen.getByRole('button', { name: /Priority/i }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /Archived/i }));
     await waitFor(() =>
       expect(mockGetInbox).toHaveBeenCalledWith(expect.objectContaining({ filter: 'archived' }))
     );
@@ -314,6 +327,8 @@ describe('Inbox tabs & filters', () => {
     renderInbox();
     await waitFor(() => expect(mockGetInbox).toHaveBeenCalled());
 
+    expect(screen.queryByLabelText('From date')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Filter by date' }));
     await userEvent.type(screen.getByLabelText('From date'), '2026-07-01');
     await waitFor(() =>
       expect(mockGetInbox).toHaveBeenCalledWith(
@@ -406,11 +421,12 @@ describe('Inbox bulk actions', () => {
 });
 
 describe('Inbox snooze', () => {
-  it('has a Snoozed tab that drives the filter param', async () => {
+  it('has a Snoozed view that drives the filter param', async () => {
     renderInbox();
     await waitFor(() => expect(mockGetInbox).toHaveBeenCalled());
 
-    await userEvent.click(screen.getByRole('button', { name: /Snoozed/i }));
+    await userEvent.click(screen.getByRole('button', { name: /More/i }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /Snoozed/i }));
     await waitFor(() =>
       expect(mockGetInbox).toHaveBeenCalledWith(expect.objectContaining({ filter: 'snoozed' }))
     );
@@ -465,7 +481,7 @@ describe('Inbox labels', () => {
 });
 
 describe('Inbox analytics', () => {
-  it('renders the analytics stat bar when metrics are available', async () => {
+  it('no longer renders the analytics stat bar', async () => {
     mockGetAnalytics.mockResolvedValue({
       window_days: 30, sent_count: 12, received_count: 8, unread_count: 3,
       needs_reply_count: 2, responded_count: 5, avg_response_seconds: 7200,
@@ -473,9 +489,9 @@ describe('Inbox analytics', () => {
     });
     renderInbox();
 
-    expect(await screen.findByText('Needs reply')).toBeInTheDocument();
-    expect(screen.getByText('Avg. response')).toBeInTheDocument();
-    expect(screen.getByText('2h')).toBeInTheDocument(); // 7200s humanized
+    await waitFor(() => expect(mockGetInbox).toHaveBeenCalled());
+    expect(screen.queryByText('Avg. response')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Received · 30d/)).not.toBeInTheDocument();
   });
 });
 

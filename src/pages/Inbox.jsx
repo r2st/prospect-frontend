@@ -4,8 +4,8 @@ import {
   Mail, MailOpen, Inbox as InboxIcon, Send, ArrowUpRight, ArrowDownLeft,
   CheckCircle2, MousePointerClick, Reply, MessageSquare, Search, RefreshCw,
   Building2, ArrowRight, Clock, Archive, ArchiveRestore, Flame, Calendar,
-  Sparkles, FileText, PenLine, Brain, TrendingUp, X, ChevronLeft, ChevronDown,
-  AlertTriangle, Keyboard, AlarmClock, Tag, Plus, Trash2, Timer, User, Check,
+  Sparkles, X, ChevronLeft, ChevronDown,
+  AlertTriangle, Keyboard, AlarmClock, Tag, Plus, Trash2, User, Check,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import EmptyState from '../components/EmptyState';
@@ -18,7 +18,6 @@ import {
   useEmailInbox, useSendReply, useTriggerSync,
   useMarkThreadRead, useArchiveThread, useBulkThreadAction, useThreadIntelligence,
   useSnoozeThread, useInboxLabels, useLabelMutations, useThreadLabel,
-  useInboxAnalytics,
 } from '../hooks/useEmailHistory';
 import { useEmailTemplates, useEmailSignatures } from '../hooks/useEmailTemplates';
 import { useConnectedAccounts } from '../hooks/useConnectedAccounts';
@@ -55,12 +54,17 @@ const CLASSIFICATION_CONFIG = {
   unknown:        { label: 'Unknown',        colors: 'bg-gray-100 text-gray-500 ring-gray-500/20' },
 };
 
+// The four views people use daily are always visible; the rest sit behind
+// "More" so the toolbar stays one row.
 const FILTER_OPTIONS = [
   { value: 'all',         label: 'All',          icon: InboxIcon },
   { value: 'received',    label: 'Received',     icon: ArrowDownLeft },
   { value: 'sent',        label: 'Sent',         icon: ArrowUpRight },
-  { value: 'opened',      label: 'Opened',       icon: MailOpen },
   { value: 'needs_reply', label: 'Needs Reply',  icon: Clock },
+];
+
+const MORE_FILTER_OPTIONS = [
+  { value: 'opened',      label: 'Opened',       icon: MailOpen },
   { value: 'priority',    label: 'Priority',     icon: Flame },
   { value: 'snoozed',     label: 'Snoozed',      icon: AlarmClock },
   { value: 'archived',    label: 'Archived',     icon: Archive },
@@ -547,94 +551,13 @@ function MessageBubble({ message }) {
   );
 }
 
-// ─── Conversation Intelligence strip (P1-6, detail header) ────────────────────
-
-function IntelligenceStrip({ threadId, onUseSuggestion }) {
-  const [open, setOpen] = useState(false);
-  const intel = useThreadIntelligence(threadId, { enabled: open });
-  const data = intel.data;
-  const nextBody = data?.next_message?.body;
-
-  return (
-    <div className="rounded-lg border border-indigo-100 bg-indigo-50/40">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-indigo-700"
-      >
-        <Brain className="h-4 w-4" />
-        Conversation Intelligence
-        <ChevronDown className={cn('ml-auto h-4 w-4 transition-transform', open && 'rotate-180')} />
-      </button>
-
-      {open && (
-        <div className="border-t border-indigo-100 px-3 py-2.5 text-sm">
-          {intel.isLoading ? (
-            <div className="flex items-center gap-2 py-2 text-xs text-gray-500">
-              <div className="h-3.5 w-3.5 animate-spin rounded-full border-b-2 border-indigo-500" />
-              Analyzing conversation…
-            </div>
-          ) : intel.isError ? (
-            <p className="py-1 text-xs text-red-600">Couldn’t load intelligence for this thread.</p>
-          ) : data ? (
-            <div className="space-y-2.5">
-              {data.momentum_label && (
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-indigo-500" />
-                  <span className="text-xs font-medium text-gray-500">Momentum</span>
-                  <span className="text-sm font-semibold text-gray-800">{data.momentum_label}</span>
-                  {typeof data.momentum_score === 'number' && (
-                    <span className="text-xs text-gray-400">({Math.round(data.momentum_score)})</span>
-                  )}
-                </div>
-              )}
-
-              {Array.isArray(data.unresolved_objections) && data.unresolved_objections.length > 0 && (
-                <div>
-                  <p className="text-xs font-medium text-gray-500">Unresolved objections</p>
-                  <ul className="mt-1 list-disc space-y-0.5 pl-5 text-sm text-gray-700">
-                    {data.unresolved_objections.map((o, i) => (
-                      <li key={i}>{typeof o === 'string' ? o : o?.text || JSON.stringify(o)}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {data.recommended_action && (
-                <div>
-                  <p className="text-xs font-medium text-gray-500">Recommended next action</p>
-                  <p className="mt-0.5 text-sm text-gray-700">{data.recommended_action}</p>
-                </div>
-              )}
-
-              {nextBody && (
-                <button
-                  type="button"
-                  onClick={() => onUseSuggestion(nextBody)}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-500 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-indigo-600"
-                >
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Use suggested message
-                </button>
-              )}
-            </div>
-          ) : (
-            <p className="py-1 text-xs text-gray-500">No analysis yet.</p>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ─── Reply composer (rich text) ──────────────────────────────────────────────
 
-function ReplyComposer({ thread, drafts, composerRef, suggestion }) {
+function ReplyComposer({ thread, drafts, composerRef }) {
   const threadId = thread.gmail_thread_id;
   const saved = drafts.getDraft(threadId);
   const [html, setHtml] = useState(saved?.html || '');
   const [text, setText] = useState(saved?.text || '');
-  const [subject, setSubject] = useState(saved?.subject ?? '');
   const sendReply = useSendReply();
   const { data: templates } = useEmailTemplates();
   const { data: signatures } = useEmailSignatures();
@@ -648,20 +571,13 @@ function ReplyComposer({ thread, drafts, composerRef, suggestion }) {
     drafts.setDraft(threadId, {
       html: next.html ?? html,
       text: next.text ?? text,
-      subject: next.subject ?? subject,
     });
-  }, [drafts, threadId, html, text, subject]);
+  }, [drafts, threadId, html, text]);
 
   const handleComposerChange = ({ html: h, text: t }) => {
     setHtml(h);
     setText(t);
     persist({ html: h, text: t });
-  };
-
-  const handleSubject = (e) => {
-    const v = e.target.value;
-    setSubject(v);
-    persist({ subject: v });
   };
 
   // Append template / signature HTML into the composer.
@@ -680,7 +596,6 @@ function ReplyComposer({ thread, drafts, composerRef, suggestion }) {
     if (!id) return;
     const tmpl = (templates || []).find((t) => String(t.id) === id);
     if (!tmpl) return;
-    if (tmpl.subject) { setSubject(tmpl.subject); persist({ subject: tmpl.subject }); }
     appendHtml(tmpl.body || '');
     toast.success('Template inserted');
   };
@@ -699,15 +614,8 @@ function ReplyComposer({ thread, drafts, composerRef, suggestion }) {
     const asHtml = textToHtml(bodyText);
     setHtml(asHtml);
     setText(bodyText);
-    drafts.setDraft(threadId, { html: asHtml, text: bodyText, subject });
-  }, [drafts, threadId, subject]);
-
-  // Apply an Intelligence "use suggested message" push. Guarded on tick so it
-  // only fires on an actual click, not on mount.
-  useEffect(() => {
-    if (suggestion?.tick && suggestion.text) applySuggestion(suggestion.text);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [suggestion?.tick]);
+    drafts.setDraft(threadId, { html: asHtml, text: bodyText });
+  }, [drafts, threadId]);
 
   const handleAiDraft = async () => {
     setAiLoading(true);
@@ -720,7 +628,6 @@ function ReplyComposer({ thread, drafts, composerRef, suggestion }) {
       const draft = data?.next_message?.body;
       if (draft) {
         applySuggestion(draft);
-        if (data?.next_message?.subject) { setSubject(data.next_message.subject); }
         toast.success('AI draft ready');
       } else {
         toast.error('No AI draft available for this thread');
@@ -753,45 +660,28 @@ function ReplyComposer({ thread, drafts, composerRef, suggestion }) {
 
   if (!lastMessage) return null;
 
+  // Replies thread under the original subject, so there is no subject field:
+  // just the body, with the insert tools on the same row as Send.
+  const toolSelect =
+    'max-w-[9rem] rounded-md border-0 bg-transparent py-1 pl-1 pr-6 text-xs text-gray-500 hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus:ring-1 focus:ring-indigo-500';
+
   return (
     <form onSubmit={handleSend} className="border-t border-gray-200 bg-white p-3">
-      <div className="mb-2 flex flex-wrap items-center gap-2">
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500">
-          <Reply className="h-4 w-4 text-gray-400" /> Reply
-        </span>
-        <label className="ml-auto inline-flex items-center gap-1 text-xs text-gray-500">
-          <FileText className="h-3.5 w-3.5" />
-          <select
-            aria-label="Insert template"
-            onChange={handleTemplate}
-            defaultValue=""
-            className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 focus:border-indigo-500 focus:outline-none"
-          >
-            <option value="">Template…</option>
-            {(templates || []).map((t) => (
-              <option key={t.id} value={t.id}>{t.name}</option>
-            ))}
-          </select>
-        </label>
-        <label className="inline-flex items-center gap-1 text-xs text-gray-500">
-          <PenLine className="h-3.5 w-3.5" />
-          <select
-            aria-label="Insert signature"
-            onChange={handleSignature}
-            defaultValue=""
-            className="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-700 focus:border-indigo-500 focus:outline-none"
-          >
-            <option value="">Signature…</option>
-            {(signatures || []).map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
-        </label>
+      <RichTextComposer
+        ref={composerRef}
+        value={html}
+        onChange={handleComposerChange}
+        onSend={handleSend}
+        ariaLabel="Reply body"
+        placeholder="Write your reply…"
+      />
+
+      <div className="mt-2 flex flex-wrap items-center gap-1">
         <button
           type="button"
           onClick={handleAiDraft}
           disabled={aiLoading}
-          className="inline-flex items-center gap-1.5 rounded-md border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-100 disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50 disabled:opacity-50"
         >
           {aiLoading ? (
             <div className="h-3.5 w-3.5 animate-spin rounded-full border-b-2 border-indigo-500" />
@@ -800,32 +690,27 @@ function ReplyComposer({ thread, drafts, composerRef, suggestion }) {
           )}
           AI draft
         </button>
-      </div>
-
-      <input
-        type="text"
-        aria-label="Reply subject"
-        value={subject}
-        onChange={handleSubject}
-        placeholder="Subject"
-        className="mb-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-      />
-
-      <RichTextComposer
-        ref={composerRef}
-        value={html}
-        onChange={handleComposerChange}
-        onSend={handleSend}
-        ariaLabel="Reply body"
-        placeholder="Write your reply… (⌘/Ctrl + Enter to send)"
-      />
-
-      <div className="mt-2 flex items-center justify-between">
-        <span className="text-[11px] text-gray-400">⌘/Ctrl + Enter to send</span>
+        {(templates || []).length > 0 && (
+          <select aria-label="Insert template" onChange={handleTemplate} defaultValue="" className={toolSelect}>
+            <option value="">Template…</option>
+            {templates.map((t) => (
+              <option key={t.id} value={t.id}>{t.name}</option>
+            ))}
+          </select>
+        )}
+        {(signatures || []).length > 0 && (
+          <select aria-label="Insert signature" onChange={handleSignature} defaultValue="" className={toolSelect}>
+            <option value="">Signature…</option>
+            {signatures.map((s) => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </select>
+        )}
+        <span className="ml-auto hidden text-[11px] text-gray-400 sm:inline">⌘/Ctrl + Enter</span>
         <button
           type="submit"
           disabled={sendReply.isPending || !(text || '').trim()}
-          className="inline-flex items-center gap-2 rounded-lg bg-indigo-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 disabled:opacity-50"
+          className="ml-2 inline-flex items-center gap-2 rounded-lg bg-indigo-500 px-4 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 disabled:opacity-50"
         >
           {sendReply.isPending ? (
             <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-white" />
@@ -959,15 +844,8 @@ function ThreadDetail({
   onSnooze, onUnsnooze, labels, onToggleLabel, onCreateLabel,
 }) {
   const navigate = useNavigate();
-  // IntelligenceStrip pushes a suggested reply down into the composer. The tick
-  // makes each click a distinct event the composer can react to.
-  const [suggestion, setSuggestion] = useState({ text: '', tick: 0 });
   const displaySubject = thread.subject || '(No subject)';
   const isArchived = thread.is_archived;
-
-  const handleUseSuggestion = (body) => {
-    setSuggestion((s) => ({ text: body, tick: s.tick + 1 }));
-  };
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -1040,7 +918,6 @@ function ThreadDetail({
       {/* Conversation + contact sidebar */}
       <div className="flex min-h-0 flex-1">
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-gray-50/50 p-4">
-          <IntelligenceStrip threadId={thread.gmail_thread_id} onUseSuggestion={handleUseSuggestion} />
           {thread.messages.map((msg) => (
             <MessageBubble key={msg.id} message={msg} />
           ))}
@@ -1058,52 +935,7 @@ function ThreadDetail({
         thread={thread}
         drafts={drafts}
         composerRef={composerRef}
-        suggestion={suggestion}
       />
-    </div>
-  );
-}
-
-// ─── Analytics summary bar ────────────────────────────────────────────────────
-
-function humanizeDuration(seconds) {
-  if (seconds == null) return '—';
-  if (seconds < 60) return `${Math.round(seconds)}s`;
-  const mins = seconds / 60;
-  if (mins < 60) return `${Math.round(mins)}m`;
-  const hours = mins / 60;
-  if (hours < 24) {
-    const h = hours < 10 ? Math.round(hours * 10) / 10 : Math.round(hours);
-    return `${h}h`;
-  }
-  return `${Math.round(hours / 24)}d`;
-}
-
-function StatTile({ icon: Icon, label, value, tone = 'gray' }) {
-  const tones = {
-    gray: 'text-gray-500', indigo: 'text-indigo-500',
-    amber: 'text-amber-500', green: 'text-green-500',
-  };
-  return (
-    <div className="flex items-center gap-2.5 rounded-xl border border-gray-200 bg-white px-3.5 py-2.5">
-      <Icon className={cn('h-4 w-4 flex-shrink-0', tones[tone])} />
-      <div className="min-w-0">
-        <p className="text-sm font-semibold leading-none text-gray-900">{value}</p>
-        <p className="mt-0.5 truncate text-[11px] text-gray-400">{label}</p>
-      </div>
-    </div>
-  );
-}
-
-function AnalyticsBar({ analytics }) {
-  if (!analytics) return null;
-  return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-      <StatTile icon={ArrowDownLeft} tone="indigo" label={`Received · ${analytics.window_days}d`} value={analytics.received_count ?? 0} />
-      <StatTile icon={ArrowUpRight} tone="green" label={`Sent · ${analytics.window_days}d`} value={analytics.sent_count ?? 0} />
-      <StatTile icon={Mail} tone="amber" label="Unread" value={analytics.unread_count ?? 0} />
-      <StatTile icon={Clock} tone="amber" label="Needs reply" value={analytics.needs_reply_count ?? 0} />
-      <StatTile icon={Timer} tone="indigo" label="Avg. response" value={humanizeDuration(analytics.avg_response_seconds)} />
     </div>
   );
 }
@@ -1118,6 +950,7 @@ export default function Inbox() {
   const [labelFilter, setLabelFilter] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [showDateFilter, setShowDateFilter] = useState(false);
   const [page, setPage] = useState(1);
   const [checked, setChecked] = useState(() => new Set());
   const [selectedId, setSelectedId] = useState(null);
@@ -1129,7 +962,6 @@ export default function Inbox() {
   const { data: labels = [] } = useInboxLabels();
   const { create: createLabelMut } = useLabelMutations();
   const threadLabel = useThreadLabel();
-  const { data: analytics } = useInboxAnalytics(30);
   // Accounts learned from the mail itself, accumulated across fetches so the
   // switcher's options never shrink when the user narrows to one account (which
   // would otherwise make every *other* option vanish and trap them). Keyed by
@@ -1183,6 +1015,8 @@ export default function Inbox() {
   );
 
   const threads = data?.threads || [];
+  const moreFilter = MORE_FILTER_OPTIONS.find((o) => o.value === filter) || null;
+  const hasDateFilter = Boolean(dateFrom || dateTo);
   const totalThreads = data?.total || 0;
   const totalPages = Math.ceil(totalThreads / 20);
   const selectedThread = threads.find((t) => t.gmail_thread_id === selectedId) || null;
@@ -1440,8 +1274,6 @@ export default function Inbox() {
         </div>
       </div>
 
-      <AnalyticsBar analytics={analytics} />
-
       {showShortcuts && (
         <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
           <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-800">
@@ -1458,94 +1290,142 @@ export default function Inbox() {
         </div>
       )}
 
-      {/* Account filter */}
-      {accounts.length > 0 && (
-        <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2">
-          <label htmlFor="inbox-account-filter" className="flex items-center gap-1.5 text-sm font-medium text-gray-600">
-            <Mail className="h-4 w-4 text-gray-400" /> Account
-          </label>
-          <select
-            id="inbox-account-filter"
-            value={accountEmail}
-            onChange={handleAccountChange}
-            aria-label="Filter inbox by email account"
-            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 sm:w-80"
-          >
-            <option value="">All accounts</option>
-            {accounts.map((a) => (
-              <option key={a.id ?? a.email} value={a.email}>{accountOptionLabel(a)}</option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {/* Filters row */}
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-wrap gap-1">
-          {FILTER_OPTIONS.map((opt) => {
-            const Icon = opt.icon;
-            return (
+      {/* Toolbar: views on the left; search, mailbox and date on the right. */}
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+        <div className="flex flex-wrap items-center gap-1">
+          {FILTER_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => handleFilterChange(opt.value)}
+              aria-pressed={filter === opt.value}
+              className={cn(
+                'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
+                filter === opt.value
+                  ? 'bg-indigo-500 text-white shadow-sm'
+                  : 'text-gray-600 hover:bg-gray-100'
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+          <Dropdown
+            align="left"
+            trigger={({ open, toggle }) => (
               <button
-                key={opt.value}
                 type="button"
-                onClick={() => handleFilterChange(opt.value)}
+                onClick={toggle}
+                aria-haspopup="menu"
+                aria-expanded={open}
                 className={cn(
-                  'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
-                  filter === opt.value
+                  'inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
+                  moreFilter
                     ? 'bg-indigo-500 text-white shadow-sm'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    : 'text-gray-600 hover:bg-gray-100'
                 )}
               >
-                <Icon className="h-3.5 w-3.5" />
-                {opt.label}
+                {moreFilter ? moreFilter.label : 'More'}
+                <ChevronDown className="h-3.5 w-3.5" />
               </button>
-            );
-          })}
+            )}
+          >
+            {({ close }) => MORE_FILTER_OPTIONS.map((opt) => {
+              const Icon = opt.icon;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  role="menuitem"
+                  onClick={() => { handleFilterChange(opt.value); close(); }}
+                  className={cn(
+                    'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm',
+                    filter === opt.value ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50'
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5 text-gray-400" />
+                  {opt.label}
+                </button>
+              );
+            })}
+          </Dropdown>
         </div>
 
-        <form onSubmit={handleSearch} className="relative w-full lg:w-72">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <input
-            ref={searchRef}
-            type="text"
-            placeholder="Search subject, name, or message body..."
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-          />
-        </form>
-      </div>
-
-      {/* Date range */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600">
-          <Calendar className="h-4 w-4 text-gray-400" /> Date
-        </span>
-        <input
-          type="date"
-          aria-label="From date"
-          value={dateFrom}
-          onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
-          className="rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none"
-        />
-        <span className="text-sm text-gray-400">to</span>
-        <input
-          type="date"
-          aria-label="To date"
-          value={dateTo}
-          onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
-          className="rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none"
-        />
-        {(dateFrom || dateTo) && (
+        <div className="flex flex-1 flex-wrap items-center gap-2 lg:justify-end">
+          <form onSubmit={handleSearch} className="relative min-w-[12rem] flex-1 lg:max-w-xs">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              ref={searchRef}
+              type="text"
+              placeholder="Search mail…"
+              aria-label="Search mail"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 py-1.5 pl-9 pr-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+          </form>
+          {accounts.length > 0 && (
+            <select
+              id="inbox-account-filter"
+              value={accountEmail}
+              onChange={handleAccountChange}
+              aria-label="Filter inbox by email account"
+              className="max-w-[11rem] rounded-lg border border-gray-300 bg-white py-1.5 pl-2.5 pr-7 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            >
+              <option value="">All accounts</option>
+              {accounts.map((a) => (
+                <option key={a.id ?? a.email} value={a.email}>{accountOptionLabel(a)}</option>
+              ))}
+            </select>
+          )}
           <button
             type="button"
-            onClick={() => { setDateFrom(''); setDateTo(''); setPage(1); }}
-            className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-700"
+            onClick={() => setShowDateFilter((v) => !v)}
+            aria-expanded={showDateFilter || hasDateFilter}
+            title="Filter by date"
+            aria-label="Filter by date"
+            className={cn(
+              'rounded-lg border p-2 transition-colors',
+              hasDateFilter
+                ? 'border-indigo-300 bg-indigo-50 text-indigo-600'
+                : 'border-gray-300 bg-white text-gray-500 hover:bg-gray-50'
+            )}
           >
-            <X className="h-3.5 w-3.5" /> Clear
+            <Calendar className="h-4 w-4" />
           </button>
-        )}
+        </div>
       </div>
+
+      {/* Date range — tucked away until asked for, and kept open while set so
+          an active range is never invisible. */}
+      {(showDateFilter || hasDateFilter) && (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-gray-500">From</span>
+          <input
+            type="date"
+            aria-label="From date"
+            value={dateFrom}
+            onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+            className="rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none"
+          />
+          <span className="text-gray-500">to</span>
+          <input
+            type="date"
+            aria-label="To date"
+            value={dateTo}
+            onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+            className="rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-sm text-gray-700 focus:border-indigo-500 focus:outline-none"
+          />
+          {hasDateFilter && (
+            <button
+              type="button"
+              onClick={() => { setDateFrom(''); setDateTo(''); setPage(1); setShowDateFilter(false); }}
+              className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-700"
+            >
+              <X className="h-3.5 w-3.5" /> Clear
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Label filter chips */}
       {labels.length > 0 && (
@@ -1632,7 +1512,7 @@ export default function Inbox() {
           </p>
         </div>
       ) : (
-        <div className="flex gap-4 lg:h-[calc(100vh-19rem)] lg:min-h-[34rem]">
+        <div className="flex gap-4 lg:h-[calc(100vh-15rem)] lg:min-h-[34rem]">
           {/* Left rail: thread list */}
           <div className={cn(
             'flex w-full flex-col lg:w-[22rem] xl:w-[24rem]',
