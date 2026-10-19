@@ -14,9 +14,57 @@ html {
 }
 html.dark {
   color-scheme: dark;
+  /* Pulse teal, matching the dark theme's accent (tailwind.config.js). */
+  --brand: #2dd4bf;
+  --brand-hover: #5eead4;
 }
 html.dark ::selection {
-  background-color: rgba(129, 140, 248, 0.3);
+  background-color: rgba(45, 212, 191, 0.25);
+}
+
+/* The robot mark follows the accent: teal in the dark theme (see Logo.jsx). */
+html.dark .logo-accent-fill {
+  fill: #14b8a6;
+}
+html.dark .logo-accent-stroke {
+  stroke: #14b8a6;
+}
+html.dark .logo-pupil {
+  fill: #042f2e;
+}
+
+/* Sign-in hero mascot: Pulse's floating robot with a pulsing antenna and
+   blinking eyes. */
+@keyframes prospect-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+@keyframes prospect-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+@keyframes prospect-blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  96% { transform: scaleY(0.1); }
+}
+.hero-robot-float {
+  animation: prospect-float 4s ease-in-out infinite;
+  filter: drop-shadow(0 0 30px rgba(13, 148, 136, 0.3));
+}
+.hero-robot .antenna-glow {
+  animation: prospect-pulse 2s ease-in-out infinite;
+}
+.hero-robot .robot-eye {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: prospect-blink 5s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-robot-float,
+  .hero-robot .antenna-glow,
+  .hero-robot .robot-eye {
+    animation: none;
+  }
 }
 
 body {

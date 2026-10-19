@@ -81,7 +81,13 @@ are written in plain light utilities — **don't add `dark:` twins**. Instead
 variables that flip under `.dark`, and lifts deep text shades (700–900).
 Consequences: `bg-gray-900` is not "always dark" (it's overridden to a dark
 chip); a surface that must stay dark in both themes (the sign-in hero) uses
-fixed hex + `white/…` alphas, never grays. `public/theme-init.js` applies the
+fixed hex + `white/…` alphas, never grays.
+The dark theme is Pulse's palette, not a dark indigo: neutral near-black page
+(`#0a0a0b`), `#141417` cards with thin `gray-200` borders and no shadow, and
+**teal** as the accent — the whole `indigo` family (and `brand`) is variables,
+indigo in light and teal in dark, so keep writing `indigo-*` for the accent.
+The sign-in hero is near-black + teal in both themes, with Pulse's floating,
+blinking robot (`HeroRobot` in `Login.jsx`, keyframes in `index.css`). `public/theme-init.js` applies the
 theme before paint — external because the CSP is `script-src 'self'`.
 
 ## Key Patterns
