@@ -498,12 +498,30 @@ class DashboardErrorBoundary extends React.Component {
 
 function Dashboard() {
   const navigate = useNavigate();
-  const { data: metrics, isLoading: metricsLoading } = useDashboardMetrics();
-  const { data: activity, isLoading: activityLoading } = useRecentActivity();
-  const { data: topLeads, isLoading: topLeadsLoading } = useTopLeads();
-  const { data: trends } = useEmailTrends(30);
-  const { data: upcomingTasks, isLoading: tasksLoading } = useUpcomingTasks(5);
-  const { data: kpis } = useKPIs();
+  const metricsQ = useDashboardMetrics();
+  const activityQ = useRecentActivity();
+  const topLeadsQ = useTopLeads();
+  const trendsQ = useEmailTrends(30);
+  const tasksQ = useUpcomingTasks(5);
+  const kpisQ = useKPIs();
+  const { data: metrics, isLoading: metricsLoading } = metricsQ;
+  const { data: activity, isLoading: activityLoading } = activityQ;
+  const { data: topLeads, isLoading: topLeadsLoading } = topLeadsQ;
+  const { data: trends } = trendsQ;
+  const { data: upcomingTasks, isLoading: tasksLoading } = tasksQ;
+  const { data: kpis } = kpisQ;
+
+  // A failed request used to render as an empty card — indistinguishable from
+  // "no data yet". Name what didn't load and offer a retry instead.
+  const failed = [
+    ['metrics', metricsQ],
+    ['recent activity', activityQ],
+    ['top leads', topLeadsQ],
+    ['email trends', trendsQ],
+    ['upcoming tasks', tasksQ],
+    ['KPIs', kpisQ],
+  ].filter(([, q]) => q.isError);
+  const retryFailed = () => failed.forEach(([, q]) => q.refetch());
 
   const industryData = (metrics?.industry_breakdown || []).map((i) => ({
     name: i.industry,
@@ -519,6 +537,24 @@ function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {failed.length > 0 && (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+        >
+          <span>
+            Couldn&apos;t load {failed.map(([name]) => name).join(', ')}. The numbers below may be incomplete.
+          </span>
+          <button
+            type="button"
+            onClick={retryFailed}
+            className="rounded-md border border-red-300 bg-white px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       {/* Welcome Header */}
       <WelcomeHeader kpis={kpis} trends={trends} />
 
