@@ -142,6 +142,30 @@ export function useCampaignActions(id) {
     onError: (e) => toast.error(errMsg(e, 'Could not approve the email')),
   });
 
+  const bulkApprove = useMutation({
+    mutationFn: (data) => campaignsApi.bulkApprove(id, data),
+    onSuccess: (data) => {
+      invalidateCampaign(id);
+      const n = data?.approved || 0;
+      const left = data?.skipped_unverified || 0;
+      const leftNote = left ? ` ${left} unverified left as draft${left === 1 ? '' : 's'}.` : '';
+      if (!n) {
+        toast.error(left ? `Nothing approved — ${left} draft${left === 1 ? ' is' : 's are'} unverified.` : 'No drafts to approve');
+        return;
+      }
+      const what = `${n} email${n === 1 ? '' : 's'} approved`;
+      if (data?.instant_send === 'dispatched') {
+        toast.success(`${what} — sending now.${leftNote}`);
+        setTimeout(() => invalidateCampaign(id), SENT_REFRESH_MS);
+      } else if (data?.instant_send === 'limit_reached') {
+        toast.success(`${what} — today's warm-up limit is reached, so they go out tomorrow.${leftNote}`);
+      } else {
+        toast.success(`${what}.${leftNote}`);
+      }
+    },
+    onError: (e) => toast.error(errMsg(e, 'Could not approve the drafts')),
+  });
+
   const skip = useMutation({
     mutationFn: (pid) => campaignsApi.skip(id, pid),
     onSuccess: () => {
@@ -159,6 +183,9 @@ export function useCampaignActions(id) {
     remove: (opts) => remove.mutate(undefined, opts),
     approve: (pid, opts) => approve.mutate(pid, opts),
     skip: (pid, opts) => skip.mutate(pid, opts),
+    // All verified drafts: bulkApprove(). Picked rows: bulkApprove({ prospect_ids }).
+    bulkApprove: (data = { verified_only: true }, opts) => bulkApprove.mutate(data, opts),
+    isBulkApproving: bulkApprove.isPending,
     isUpdating: setStatus.isPending,
     pendingStatus: setStatus.isPending ? setStatus.variables?.status : null,
     isDeleting: remove.isPending,

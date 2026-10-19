@@ -10,6 +10,7 @@ const api = {
   remove: vi.fn(),
   prospects: vi.fn(),
   approve: vi.fn(),
+  bulkApprove: vi.fn(),
   skip: vi.fn(),
   discover: vi.fn(),
 };
@@ -21,6 +22,7 @@ vi.mock('../api/client', () => ({
     remove: (...a) => api.remove(...a),
     prospects: (...a) => api.prospects(...a),
     approve: (...a) => api.approve(...a),
+    bulkApprove: (...a) => api.bulkApprove(...a),
     skip: (...a) => api.skip(...a),
     discover: (...a) => api.discover(...a),
   },
@@ -120,7 +122,7 @@ describe('CampaignDashboard', () => {
     expect(screen.getByText('Replies').parentElement).toHaveTextContent('5');
     expect(screen.getByText('Bounce Rate').parentElement).toHaveTextContent('4.0%');
     expect(screen.getByTestId('daily-chart')).toBeInTheDocument();
-    expect(screen.getByText(/1 draft\(s\) waiting for your review/)).toBeInTheDocument();
+    expect(within(screen.getByTestId('drafts-pending-banner')).getByText(/draft pending review/)).toBeInTheDocument();
   });
 
   it('shows the default email template near the top, ahead of the stats', async () => {
@@ -219,6 +221,51 @@ describe('CampaignDashboard', () => {
     const [row] = await screen.findAllByTestId('prospect-row');
     await userEvent.click(within(row).getByRole('button', { name: 'Approve email to Ana Li' }));
     await waitFor(() => expect(toastMock.success).toHaveBeenCalledWith(message));
+  });
+
+  it('approves every verified draft from the pending banner', async () => {
+    api.bulkApprove.mockResolvedValue({ approved: 3, skipped_unverified: 2, skipped_ineligible: 0, instant_send: 'dispatched' });
+    renderPage();
+    const banner = await screen.findByTestId('drafts-pending-banner');
+    await userEvent.click(within(banner).getByRole('button', { name: /Approve all/ }));
+    await waitFor(() => expect(api.bulkApprove).toHaveBeenCalledWith('c1', { verified_only: true }));
+    await waitFor(() =>
+      expect(toastMock.success).toHaveBeenCalledWith('3 emails approved — sending now. 2 unverified left as drafts.')
+    );
+  });
+
+  it('approves only the ticked drafts', async () => {
+    api.prospects.mockResolvedValue({
+      ...PROSPECTS,
+      items: [
+        ...PROSPECTS.items,
+        { id: 'p3', status: 'draft', company_name: 'Gamma Works', contact_name: 'Cy Ode', email_subject: 's', email_body: 'b' },
+      ],
+      total: 3,
+    });
+    api.bulkApprove.mockResolvedValue({ approved: 1, skipped_unverified: 0, skipped_ineligible: 0 });
+    renderPage();
+    const rows = await screen.findAllByTestId('prospect-row');
+    // Sent rows have nothing to approve, so no checkbox.
+    expect(within(rows[1]).queryByRole('checkbox')).not.toBeInTheDocument();
+
+    await userEvent.click(within(rows[2]).getByRole('checkbox', { name: 'Select Cy Ode' }));
+    const bar = screen.getByTestId('bulk-approve-bar');
+    expect(within(bar).getByText('1 selected')).toBeInTheDocument();
+    await userEvent.click(within(bar).getByRole('button', { name: /Approve selected/ }));
+    await waitFor(() =>
+      expect(api.bulkApprove).toHaveBeenCalledWith('c1', { prospect_ids: ['p3'], verified_only: false })
+    );
+    await waitFor(() => expect(within(bar).queryByText('1 selected')).not.toBeInTheDocument());
+  });
+
+  it('select-all ticks every draft on the page', async () => {
+    renderPage();
+    await screen.findAllByTestId('prospect-row');
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select all drafts on this page' }));
+    expect(within(screen.getByTestId('bulk-approve-bar')).getByText('1 selected')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select all drafts on this page' }));
+    expect(screen.queryByText('1 selected')).not.toBeInTheDocument();
   });
 
   it('previews the generated email and approves from the modal', async () => {

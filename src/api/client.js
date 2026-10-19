@@ -293,6 +293,9 @@ export const campaignsApi = {
   prospects: (id, params) => api.get(`/campaigns/${id}/prospects`, { params }).then(r => r.data),
   approve: (id, pid) => api.post(`/campaigns/${id}/prospects/${pid}/approve`).then(r => r.data),
   skip: (id, pid) => api.post(`/campaigns/${id}/prospects/${pid}/skip`).then(r => r.data),
+  // { prospect_ids?, verified_only? } → { approved, skipped_unverified, skipped_ineligible, instant_send }.
+  // No ids means every draft in the campaign.
+  bulkApprove: (id, data) => api.post(`/campaigns/${id}/prospects/approve`, data || {}).then(r => r.data),
   // Connected Gmail + SMTP mailboxes a campaign can send from.
   senders: () => api.get('/campaigns/senders').then(r => r.data),
   // Contacts from the database: { contact_ids } → { queued, skipped: [{ email, reason, label }] }.

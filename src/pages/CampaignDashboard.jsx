@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   Building2,
   Check,
+  CheckCheck,
   Clock,
   Eye,
   FileText,
@@ -174,6 +175,48 @@ function SendWindowBanner({ campaign }) {
   );
 }
 
+// The quick-approve flow: how many drafts wait, and one click to approve every
+// one with a verified address. Unverified drafts stay for a person to check.
+function DraftsPendingBanner({ count, actions }) {
+  if (!count) return null;
+  return (
+    <div role="status" data-testid="drafts-pending-banner"
+      className="flex flex-col gap-3 rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-900 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center gap-3">
+        <span className="inline-flex min-w-[2rem] items-center justify-center rounded-full bg-indigo-600 px-2 py-1 text-sm font-semibold text-white">
+          {count}
+        </span>
+        <p>
+          <span className="font-medium">draft{count === 1 ? '' : 's'} pending review.</span>{' '}
+          Nothing is sent until approved. Approve all sends only verified addresses.
+        </p>
+      </div>
+      <button
+        type="button"
+        disabled={actions.isBulkApproving}
+        onClick={() => actions.bulkApprove({ verified_only: true })}
+        className="inline-flex flex-shrink-0 items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+      >
+        <CheckCheck className="h-4 w-4" />
+        {actions.isBulkApproving ? 'Approving…' : 'Approve all'}
+      </button>
+    </div>
+  );
+}
+
+function SelectBox({ checked, indeterminate = false, onChange, label }) {
+  return (
+    <input
+      type="checkbox"
+      checked={checked}
+      ref={(el) => { if (el) el.indeterminate = indeterminate; }}
+      onChange={onChange}
+      aria-label={label}
+      className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+    />
+  );
+}
+
 function ProspectActions({ p, busy, onApprove, onSkip, onPreview, onEditContact, onAddAtCompany }) {
   const label = p.contact_name || p.company_name;
   const editable = !SENT.includes(p.status);
@@ -237,9 +280,11 @@ function ProspectActions({ p, busy, onApprove, onSkip, onPreview, onEditContact,
   );
 }
 
-function ProspectTable({ campaignId, actions, attachments = [], sender = null }) {
+function ProspectTable({ campaignId, actions, attachments = [], sender = null, draftsPending = 0 }) {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState('');
+  // Draft ids picked for "Approve selected". Only drafts can be picked.
+  const [selected, setSelected] = useState(() => new Set());
   const [previewing, setPreviewing] = useState(null);
   const [editing, setEditing] = useState(null);
   const [addingAt, setAddingAt] = useState(null);
@@ -250,6 +295,21 @@ function ProspectTable({ campaignId, actions, attachments = [], sender = null })
   const approve = (p) => actions.approve(p.id, { onSuccess: () => setPreviewing(null) });
   const skip = (p) => actions.skip(p.id, { onSuccess: () => setPreviewing(null) });
   const busyFor = (p) => actions.pendingProspect === p.id;
+
+  const draftsOnPage = items.filter((p) => p.status === 'draft');
+  // Drop ids that stopped being drafts (approved one by one, re-filtered away).
+  const pickable = new Set(draftsOnPage.map((p) => p.id));
+  const picked = [...selected].filter((pid) => pickable.has(pid));
+  const allPicked = draftsOnPage.length > 0 && picked.length === draftsOnPage.length;
+  const togglePick = (pid) => setSelected((prev) => {
+    const next = new Set(prev);
+    if (next.has(pid)) next.delete(pid); else next.add(pid);
+    return next;
+  });
+  const toggleAll = () => setSelected(allPicked ? new Set() : new Set(draftsOnPage.map((p) => p.id)));
+  const approveSelected = () =>
+    // An explicit pick is approved as picked, like the per-row button.
+    actions.bulkApprove({ prospect_ids: picked, verified_only: false }, { onSuccess: () => setSelected(new Set()) });
   // The open preview follows refetches, so a re-draft or a save shows at once.
   const shown = previewing ? items.find((p) => p.id === previewing.id) || previewing : null;
 
@@ -269,6 +329,7 @@ function ProspectTable({ campaignId, actions, attachments = [], sender = null })
               onClick={() => {
                 setStatus(f.key);
                 setPage(1);
+                setSelected(new Set());
               }}
               className={cn(
                 'flex-shrink-0 rounded-full px-3 py-1 text-xs font-medium',
@@ -280,6 +341,51 @@ function ProspectTable({ campaignId, actions, attachments = [], sender = null })
           ))}
         </div>
       </div>
+
+      {(picked.length > 0 || draftsPending > 0) && (
+        <div className="flex flex-wrap items-center gap-2 border-b border-gray-200 bg-gray-50 px-4 py-2.5 text-sm" data-testid="bulk-approve-bar">
+          {picked.length > 0 ? (
+            <>
+              <span className="font-medium text-gray-900">{picked.length} selected</span>
+              <button
+                type="button"
+                disabled={actions.isBulkApproving}
+                onClick={approveSelected}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+              >
+                <Check className="h-3.5 w-3.5" />
+                Approve selected
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelected(new Set())}
+                className="rounded-lg px-2 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-800"
+              >
+                Clear
+              </button>
+            </>
+          ) : (
+            <span className="text-gray-600">
+              {draftsPending} draft{draftsPending === 1 ? '' : 's'} pending — tick rows to approve some, or
+            </span>
+          )}
+          <button
+            type="button"
+            disabled={actions.isBulkApproving}
+            onClick={() => actions.bulkApprove({ verified_only: true })}
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium disabled:opacity-50',
+              picked.length > 0
+                ? 'ml-auto border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                : 'bg-indigo-600 text-white hover:bg-indigo-700'
+            )}
+            title="Approves every draft with a verified address; unverified ones stay as drafts"
+          >
+            <CheckCheck className="h-3.5 w-3.5" />
+            Approve all drafts
+          </button>
+        </div>
+      )}
 
       {isLoading && (
         <div className="space-y-3 p-4" data-testid="prospects-skeleton">
@@ -314,7 +420,13 @@ function ProspectTable({ campaignId, actions, attachments = [], sender = null })
             {items.map((p) => (
               <li key={p.id} className="space-y-2 p-4">
                 <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
+                  {p.status === 'draft' && (
+                    <span className="pt-0.5">
+                      <SelectBox checked={selected.has(p.id)} onChange={() => togglePick(p.id)}
+                        label={`Select ${p.contact_name || p.company_name}`} />
+                    </span>
+                  )}
+                  <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-gray-900">{p.company_name}</p>
                     <p className="truncate text-xs text-gray-500">
                       {p.contact_name || 'No contact yet'}
@@ -336,6 +448,16 @@ function ProspectTable({ campaignId, actions, attachments = [], sender = null })
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
+                  <th className="w-10 px-4 py-3">
+                    {draftsOnPage.length > 0 && (
+                      <SelectBox
+                        checked={allPicked}
+                        indeterminate={picked.length > 0 && !allPicked}
+                        onChange={toggleAll}
+                        label="Select all drafts on this page"
+                      />
+                    )}
+                  </th>
                   {['Company', 'Contact', 'Email Status', 'Sent Date'].map((h) => (
                     <th key={h} className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                       {h}
@@ -346,7 +468,13 @@ function ProspectTable({ campaignId, actions, attachments = [], sender = null })
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {items.map((p) => (
-                  <tr key={p.id} className="hover:bg-gray-50" data-testid="prospect-row">
+                  <tr key={p.id} className={cn('hover:bg-gray-50', selected.has(p.id) && 'bg-indigo-50/50')} data-testid="prospect-row">
+                    <td className="w-10 px-4 py-3">
+                      {p.status === 'draft' && (
+                        <SelectBox checked={selected.has(p.id)} onChange={() => togglePick(p.id)}
+                          label={`Select ${p.contact_name || p.company_name}`} />
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       {p.company_id ? (
                         <Link to={`/companies/${p.company_id}`} className="text-sm font-medium text-gray-900 hover:text-indigo-600">
@@ -380,7 +508,7 @@ function ProspectTable({ campaignId, actions, attachments = [], sender = null })
               <button
                 type="button"
                 disabled={page <= 1}
-                onClick={() => setPage((n) => n - 1)}
+                onClick={() => { setPage((n) => n - 1); setSelected(new Set()); }}
                 className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
               >
                 Previous
@@ -391,7 +519,7 @@ function ProspectTable({ campaignId, actions, attachments = [], sender = null })
               <button
                 type="button"
                 disabled={page >= pages}
-                onClick={() => setPage((n) => n + 1)}
+                onClick={() => { setPage((n) => n + 1); setSelected(new Set()); }}
                 className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
               >
                 Next
@@ -575,15 +703,7 @@ export default function CampaignDashboard() {
 
       <SendWindowBanner campaign={campaign} />
 
-      {status === 'active' && campaign.settings.review_before_send && metrics.drafts_pending > 0 && (
-        <div className="flex items-start gap-3 rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-sm text-indigo-800">
-          <Mail className="mt-0.5 h-5 w-5 flex-shrink-0 text-indigo-500" />
-          <p>
-            <span className="font-medium">{metrics.drafts_pending} draft(s) waiting for your review.</span> Nothing is sent
-            until you approve it — filter the table below by Draft.
-          </p>
-        </div>
-      )}
+      {status !== 'stopped' && <DraftsPendingBanner count={metrics.drafts_pending} actions={actions} />}
 
       <TemplatePanel key={`${campaign.template_id || ''}:${campaign.template_mode || ''}`} campaign={campaign} draftsPending={campaign.metrics?.drafts_pending || 0} />
 
@@ -650,7 +770,7 @@ export default function CampaignDashboard() {
 
       <ErrorBoundary resetKey={`${id}:prospects`} fallback={({ reset }) => <SectionFallback reset={reset} />}>
         <ProspectTable campaignId={id} actions={actions} attachments={campaign.attachments || []}
-          sender={campaign.sender || null} />
+          sender={campaign.sender || null} draftsPending={status === 'stopped' ? 0 : metrics.drafts_pending} />
       </ErrorBoundary>
 
       {adding && <AddContactModal campaignId={id} onClose={() => setAdding(false)} />}
