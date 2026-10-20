@@ -26,10 +26,10 @@ import { useAuth } from '../context/AuthContext';
 import { cn } from '../lib/utils';
 
 // The public face of Prospect: a Pulse-style landing page with sign-in and
-// sign-up embedded in the hero. The hero wears Pulse's palette — near-black,
-// thin-bordered dark cards, teal accent — in both themes. It uses white/alpha,
-// fixed hex and teal 300–600 only, never the gray scale or the 50–200 tints,
-// which flip with the theme. Everything below the hero follows the theme.
+// sign-up embedded in the hero. Like Pulse's, the whole page is near-black and
+// teal in both themes: the root carries the `dark` class, so the themed gray
+// scale and tints (tailwind.config.js) resolve to their dark values inside it
+// whatever the app theme is. The theme switch still sets the app's theme.
 
 const HERO_BG = '#0A0A0B';
 
@@ -337,7 +337,7 @@ export default function Login({ initialMode = 'signin' }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="dark min-h-screen bg-gray-50" style={{ colorScheme: 'dark' }}>
       {/* Hero — Pulse near-black and teal in both themes */}
       <section className="relative overflow-hidden text-[#E4E4E7]" style={{ backgroundColor: HERO_BG }}>
         <div
@@ -408,10 +408,10 @@ export default function Login({ initialMode = 'signin' }) {
         </div>
       </section>
 
-      {/* Features — follows the theme */}
+      {/* Features — dark-gray cards with thin borders, as on Pulse */}
       <section aria-labelledby="features-heading" className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-sm font-semibold uppercase tracking-wider text-indigo-600">Everything in one place</p>
+          <p className="font-mono text-xs uppercase tracking-[0.16em] text-indigo-600">Everything in one place</p>
           <h2 id="features-heading" className="mt-2 text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
             From first touch to signed client
           </h2>

@@ -4,7 +4,7 @@ import Logo, { BRAND_ACCENT } from './Logo';
 import { DoAideBadge, DoAideFooter } from './DoAideBrand';
 
 describe('DoAide branding', () => {
-  it('draws the shared robot mark in Prospect indigo, with the DoAide | Prospect wordmark', () => {
+  it('draws the shared robot mark in Pulse teal, with the DoAide | Prospect wordmark', () => {
     const { container } = render(<Logo />);
     expect(screen.getByRole('img', { name: 'DoAide Prospect' })).toBeInTheDocument();
     expect(container.querySelector('rect[width="22"]')).toHaveAttribute('fill', BRAND_ACCENT);
@@ -12,7 +12,7 @@ describe('DoAide branding', () => {
     expect(screen.getByText('Prospect').tagName).toBe('EM');
   });
 
-  it('draws the eyes light so they show against the indigo face', () => {
+  it('draws the eyes light so they show against the teal face', () => {
     const { container } = render(<Logo />);
     const eyes = container.querySelectorAll('[data-part="eye"]');
     expect(eyes).toHaveLength(2);

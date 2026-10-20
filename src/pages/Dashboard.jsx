@@ -500,7 +500,7 @@ class DashboardErrorBoundary extends React.Component {
 
 function CampaignCTA({ navigate }) {
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-indigo-100 bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 px-8 py-6 shadow-sm transition-shadow hover:shadow-lg">
+    <div className="group relative overflow-hidden rounded-2xl border border-indigo-100 bg-gradient-to-r from-indigo-600 via-indigo-600 to-indigo-700 px-8 py-6 shadow-sm transition-shadow hover:shadow-lg">
       <div className="pointer-events-none absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/10" />
       <div className="pointer-events-none absolute -bottom-6 right-16 h-24 w-24 rounded-full bg-white/5" />
       <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

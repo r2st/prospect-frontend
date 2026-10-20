@@ -48,7 +48,7 @@ Build → zip `dist/` → create-deployment → upload → start-deployment.
 - New pages need: route, sidebar nav entry, command palette entry
 - Use existing component patterns (see `Companies.jsx` for table pattern, `CompanyDetail` for tabs)
 - Mobile responsive (test at 375px)
-- Accent color: indigo-based palette
+- Accent color: Pulse teal (written as `indigo-*`, see Theming)
 
 ## Platform credentials are rotated from the UI, and the copy has to be careful
 
@@ -82,12 +82,16 @@ variables that flip under `.dark`, and lifts deep text shades (700–900).
 Consequences: `bg-gray-900` is not "always dark" (it's overridden to a dark
 chip); a surface that must stay dark in both themes (the sign-in hero) uses
 fixed hex + `white/…` alphas, never grays.
-The dark theme is Pulse's palette, not a dark indigo: neutral near-black page
-(`#0a0a0b`), `#141417` cards with thin `gray-200` borders and no shadow, and
-**teal** as the accent — the whole `indigo` family (and `brand`) is variables,
-indigo in light and teal in dark, so keep writing `indigo-*` for the accent.
-The sign-in hero is near-black + teal in both themes, with Pulse's floating,
-blinking robot (`HeroRobot` in `Login.jsx`, keyframes in `index.css`). `public/theme-init.js` applies the
+Both themes follow Pulse (DoAide's shared theme). Light: white canvas
+(`bg-canvas`), white cards with `gray-200` borders, Tailwind grays for text.
+Dark: neutral near-black canvas, `#141417` cards with thin borders, no shadow.
+The accent is Pulse **teal** in both — the whole `indigo` family (and `brand`)
+is variables that resolve to teal, so keep writing `indigo-*` for the accent.
+The sign-in page is near-black + teal in both themes, as Pulse's is: its root
+carries the `dark` class, so the themed classes inside resolve dark. It has
+Pulse's floating, blinking robot (`HeroRobot` in `Login.jsx`, keyframes in
+`index.css`). Fonts: Inter, Instrument Serif (`font-serif`), IBM Plex Mono
+(`font-mono`). `public/theme-init.js` applies the
 theme before paint — external because the CSP is `script-src 'self'`.
 
 ## Key Patterns

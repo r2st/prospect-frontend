@@ -1,17 +1,16 @@
 import { cn } from '../lib/utils';
 
-// Prospect's accent. Every DoAide product draws the same robot mark in its own
-// colour (Pulse teal, Jobs gold); the shape and the wordmark are what's shared.
-export const BRAND_ACCENT = '#4F46E5';
-// Eyes and smile are drawn light so they read against the indigo face; black
-// eyes on indigo vanished at sidebar size. The pupils carry the deep ink.
+// Prospect's accent: Pulse teal, since Prospect wears the shared DoAide theme.
+export const BRAND_ACCENT = '#0D9488';
+// Eyes and smile are drawn light so they read against the face at sidebar
+// size. The pupils carry the deep ink.
 const EYE = '#FFFFFF';
-const PUPIL = '#1E1B4B';
-// The sign-in hero's accent: Pulse teal, in both themes.
-export const HERO_ACCENT = '#0D9488';
+const PUPIL = '#042F2E';
+// The sign-in hero's accent (it is dark in both themes).
+export const HERO_ACCENT = BRAND_ACCENT;
 
 /**
- * The DoAide robot mark, in Prospect indigo. Rendered inline so it stays crisp
+ * The DoAide robot mark, in Pulse teal. Rendered inline so it stays crisp
  * at any size.
  */
 export function LogoMark({ className, size = 32, color = BRAND_ACCENT, title = 'DoAide Prospect' }) {

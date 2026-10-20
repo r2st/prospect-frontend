@@ -17,11 +17,13 @@ import plugin from 'tailwindcss/plugin';
 // Mid shades (300–600) are left alone: they are the accent colours themselves
 // and read on both backgrounds — except for the accent family, below.
 //
-// The dark theme follows Pulse: a neutral near-black page, dark-gray cards with
-// thin borders, and teal as the accent. Indigo is the accent in every page's
-// classes, so the whole indigo family (and `brand`, which is indigo) is a set of
-// variables: indigo in light, teal in dark. Violet and purple stay as they are —
-// they carry status meaning in badges, not the accent.
+// Both themes follow Pulse (DoAide's shared theme). Light: a white canvas,
+// white cards with gray-200 borders and a soft shadow, Tailwind grays for text.
+// Dark: a neutral near-black canvas, dark-gray cards with thin borders. The
+// accent is Pulse teal in both. Pages still write `indigo-*` for the accent, so
+// the whole indigo family (and `brand`) is a set of variables that resolve to
+// teal — light tints in light, dark tints in dark. Violet and purple stay as
+// they are: they carry status meaning in badges, not the accent.
 const hex = (h) => {
   const n = parseInt(h.slice(1), 16);
   return `${(n >> 16) & 255} ${(n >> 8) & 255} ${n & 255}`;
@@ -38,7 +40,7 @@ const DARK_GRAY = {
 // Card surface (what `bg-white` becomes): a step above the page.
 const SURFACE = '#141417';
 const ACCENT = 'indigo';
-const DARK_ACCENT = 'teal';
+const ACCENT_HUE = 'teal';
 const ACCENT_SHADES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
 const TINT_FAMILIES = [
   'red', 'orange', 'amber', 'yellow', 'lime', 'green', 'emerald', 'teal', 'cyan',
@@ -62,27 +64,30 @@ for (const s of GRAY_SHADES) {
   darkVars[`--c-gray-${s}`] = hex(DARK_GRAY[s]);
 }
 for (const f of TINT_FAMILIES) {
-  const mid = defaultColors[f === ACCENT ? DARK_ACCENT : f][500];
+  const mid = defaultColors[f === ACCENT ? ACCENT_HUE : f][500];
   // Mix the family's 500 into the dark surface: a solid colour (not alpha) so
   // `bg-indigo-50/60` style opacity modifiers still compose.
   const mix = (a, b, t) =>
     hex(a).split(' ').map((c, i) => Math.round(c * (1 - t) + hex(b).split(' ')[i] * t)).join(' ');
-  for (const s of TINT_SHADES) lightVars[`--c-${f}-${s}`] = hex(defaultColors[f][s]);
+  for (const s of TINT_SHADES) lightVars[`--c-${f}-${s}`] = hex(defaultColors[f === ACCENT ? ACCENT_HUE : f][s]);
   darkVars[`--c-${f}-50`] = mix(DARK_GRAY[100], mid, 0.14);
   darkVars[`--c-${f}-100`] = mix(DARK_GRAY[100], mid, 0.24);
   darkVars[`--c-${f}-200`] = mix(DARK_GRAY[200], mid, 0.32);
 }
 for (const s of ACCENT_SHADES.filter((s) => !TINT_SHADES.includes(s))) {
-  lightVars[`--c-${ACCENT}-${s}`] = hex(defaultColors[ACCENT][s]);
-  darkVars[`--c-${ACCENT}-${s}`] = hex(defaultColors[DARK_ACCENT][s]);
+  lightVars[`--c-${ACCENT}-${s}`] = hex(defaultColors[ACCENT_HUE][s]);
+  darkVars[`--c-${ACCENT}-${s}`] = hex(defaultColors[ACCENT_HUE][s]);
 }
+
+lightVars['--c-canvas'] = hex('#ffffff');
+darkVars['--c-canvas'] = hex(DARK_GRAY[50]);
 
 const darkOverrides = {};
 for (const f of TINT_FAMILIES) {
   for (const [from, to] of Object.entries(DEEP_TEXT)) {
     const sel = `text-${f}-${from}`;
     darkOverrides[`.dark .${sel}, .dark .hover\\:${sel}:hover`] = {
-      color: defaultColors[f === ACCENT ? DARK_ACCENT : f][to],
+      color: defaultColors[f === ACCENT ? ACCENT_HUE : f][to],
     };
   }
 }
@@ -90,7 +95,7 @@ for (const f of TINT_FAMILIES) {
 // uses for its highlights; teal-600 itself is a button colour, dim as text.
 for (const s of [500, 600]) {
   const sel = `text-${ACCENT}-${s}`;
-  darkOverrides[`.dark .${sel}, .dark .hover\\:${sel}:hover`] = { color: defaultColors[DARK_ACCENT][400] };
+  darkOverrides[`.dark .${sel}, .dark .hover\\:${sel}:hover`] = { color: defaultColors[ACCENT_HUE][400] };
 }
 // Surfaces: `white` stays white for text on accent buttons; only white
 // *backgrounds* and borders become the dark card surface.
@@ -121,11 +126,19 @@ export default {
     extend: {
       colors: {
         ...colors,
-        // Same as the accent: indigo in light, teal in dark.
+        // Same as the accent.
         brand: colors[ACCENT],
+        // The page behind everything: white in light, near-black in dark.
+        canvas: v('canvas'),
+      },
+      fontFamily: {
+        // Pulse's type: Instrument Serif for display figures, IBM Plex Mono
+        // for eyebrows and data labels.
+        serif: ['"Instrument Serif"', 'Georgia', 'serif'],
+        mono: ['"IBM Plex Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },
       boxShadow: {
-        card: '0 1px 2px 0 rgba(16, 24, 40, 0.04), 0 1px 3px 0 rgba(16, 24, 40, 0.06)',
+        card: '0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06)',
       },
     },
   },

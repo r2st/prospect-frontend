@@ -135,7 +135,7 @@ export default function Layout({ children }) {
         className={cn(
           'group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
           isActive
-            ? 'bg-indigo-50 text-indigo-700'
+            ? 'bg-indigo-50 font-medium text-indigo-600'
             : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
         )}
       >
@@ -255,7 +255,7 @@ export default function Layout({ children }) {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-canvas">
       {/* Mobile top bar */}
       <header className="fixed inset-x-0 top-0 z-30 flex h-14 items-center gap-3 border-b border-gray-200 bg-white/90 px-4 text-gray-900 backdrop-blur lg:hidden">
         <button

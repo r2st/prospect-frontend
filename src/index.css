@@ -3,13 +3,14 @@
 @tailwind utilities;
 
 :root {
-  --brand: #4338ca;
-  --brand-hover: #3730a3;
+  /* Pulse teal (tailwind.config.js maps the indigo accent to it). */
+  --brand: #0d9488;
+  --brand-hover: #0f766e;
 }
 
 /* Page and text colours follow the themed gray scale (see tailwind.config.js). */
 html {
-  background-color: rgb(var(--c-gray-50));
+  background-color: rgb(var(--c-canvas));
   color-scheme: light;
 }
 html.dark {
@@ -85,7 +86,7 @@ body {
 
 /* Branded text selection */
 ::selection {
-  background-color: rgba(67, 56, 202, 0.14);
+  background-color: rgba(13, 148, 136, 0.15);
 }
 
 /* Refined, unobtrusive scrollbars */
