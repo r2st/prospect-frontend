@@ -1,16 +1,25 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { Loader2, Building2, Palette, CreditCard, Braces, ShieldAlert, Lock } from 'lucide-react';
+import { Loader2, Building2, Palette, CreditCard, Braces, ShieldAlert, Lock, Mail } from 'lucide-react';
 import { orgApi, canManageOrg } from '../api/org';
 import { useAuth } from '../context/AuthContext';
 import { usePlatform } from '../context/PlatformContext';
 import PlatformOrgPrompt from '../components/PlatformOrgPrompt';
 
+// The sender identity printed in every outgoing email's footer — this org's,
+// never DoAide's. CAN-SPAM / CASL require the sender's name and a physical
+// postal address on commercial email. Stored in `branding` with the keys the
+// backend reads (email_dispatch.sender_identity_for_org).
+const FOOTER_FIELDS = [
+  { key: 'company_name', label: 'Company name', placeholder: 'Defaults to the organization name', type: 'text' },
+  { key: 'company_address', label: 'Company address', placeholder: 'Street, city, region, postal code, country', type: 'text' },
+  { key: 'company_website', label: 'Company website', placeholder: 'https://yourco.com', type: 'url' },
+];
+
 // Branding keys we expose as a structured form; anything else lives in the raw
 // config JSON editor below.
 const BRANDING_FIELDS = [
-  { key: 'company_name', label: 'Company name', placeholder: 'Shown in white-label surfaces', type: 'text' },
   { key: 'support_email', label: 'Support email', placeholder: 'support@yourco.com', type: 'email' },
   { key: 'primary_color', label: 'Primary color', placeholder: '#4f46e5', type: 'color' },
   { key: 'secondary_color', label: 'Secondary color', placeholder: '#0ea5e9', type: 'color' },
@@ -155,6 +164,44 @@ export default function OrganizationSettings() {
         <Field label="Slug" hint="Identifies your org in URLs — changed by the platform team.">
           <input type="text" value={org.slug} disabled readOnly className={`${inputCls} bg-gray-50 text-gray-500`} />
         </Field>
+      </Section>
+
+      {/* Email footer */}
+      <Section
+        icon={Mail}
+        title="Email footer"
+        subtitle="Printed under the unsubscribe link in every email you send. Anti-spam law (CAN-SPAM) requires your company's postal address."
+      >
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {FOOTER_FIELDS.map((f) => (
+            <Field key={f.key} label={f.label}>
+              <input
+                type={f.type}
+                value={branding[f.key] || ''}
+                disabled={!canWrite}
+                onChange={(e) => setBranding({ ...branding, [f.key]: e.target.value })}
+                placeholder={f.placeholder}
+                className={inputCls}
+              />
+            </Field>
+          ))}
+        </div>
+        <div aria-label="Footer preview" className="mt-4 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-xs leading-relaxed text-gray-500">
+          —<br />
+          Don&apos;t want these emails? Reply UNSUBSCRIBE or click: <span className="underline">unsubscribe</span>
+          <br />
+          {(branding.company_name || name || 'Your company').trim()}
+          {branding.company_address ? ` · ${branding.company_address.trim()}` : ''}
+          {branding.company_website ? (
+            <>
+              <br />
+              {branding.company_website.trim()}
+            </>
+          ) : null}
+          {!branding.company_address && (
+            <p className="mt-2 font-medium text-amber-700">Add your company address — emails without one aren&apos;t CAN-SPAM compliant.</p>
+          )}
+        </div>
       </Section>
 
       {/* Branding */}

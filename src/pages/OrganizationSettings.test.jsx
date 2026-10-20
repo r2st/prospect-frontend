@@ -89,6 +89,30 @@ describe('OrganizationSettings', () => {
     expect(toast.success).toHaveBeenCalled();
   });
 
+  it("edits the email footer's company name, address and website, with a live preview", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByDisplayValue('Apprend Technologies');
+    const preview = screen.getByLabelText('Footer preview');
+    expect(preview).toHaveTextContent(/aren.t CAN-SPAM compliant/);
+
+    await user.type(screen.getByLabelText('Company name'), 'DevHeal Labs');
+    await user.type(screen.getByLabelText('Company address'), 'IDA Mallapur, Hyderabad, Telangana, India');
+    await user.type(screen.getByLabelText('Company website'), 'https://devheallabs.com');
+    expect(preview).toHaveTextContent('DevHeal Labs · IDA Mallapur, Hyderabad, Telangana, India');
+    expect(preview).toHaveTextContent('https://devheallabs.com');
+    expect(preview).not.toHaveTextContent(/CAN-SPAM/);
+
+    await user.click(screen.getByRole('button', { name: /save changes/i }));
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
+    expect(mockUpdate.mock.calls[0][0].branding).toMatchObject({
+      company_name: 'DevHeal Labs',
+      company_address: 'IDA Mallapur, Hyderabad, Telangana, India',
+      company_website: 'https://devheallabs.com',
+      primary_color: '#4f46e5',
+    });
+  });
+
   it('rejects invalid JSON in the config editor', async () => {
     const user = userEvent.setup();
     renderPage();
